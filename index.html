@@ -5,6 +5,7 @@
 </head>
 <body>
     <h1>Cargar Archivo de Ventas Excel</h1>
+    <!-- ¡Ajusta el id y el accept para XLSX! -->
     <input type="file" id="excelFile" accept=".xlsx" /> 
     <button onclick="uploadFile()">Procesar</button>
     <pre id="results"></pre>
@@ -20,13 +21,13 @@
                 return;
             }
 
-            // ¡REEMPLAZA ESTO con la URL de tu función de Vercel!
-            const vercelFunctionUrl = 'https://[TU_PROYECTO_EN_VERCEL].vercel.app/api/process-sales'; 
+            // ¡IMPORTANTE! Reemplaza esta URL con la URL de tu función de Vercel desplegada
+            const vercelFunctionUrl = 'https://ohana-ventas.vercel.app/api/process-sales'; 
 
             try {
                 const response = await fetch(vercelFunctionUrl, {
                     method: 'POST',
-                    body: file // Envía el objeto File directamente
+                    body: file // Envía el objeto File directamente (sin FileReader para binarios)
                 });
 
                 const data = await response.json();
