@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Subir y Procesar Ventas</title>
+</head>
+<body>
+    <h1>Cargar Archivo de Ventas CSV</h1>
+    <input type="file" id="csvFile" accept=".csv" />
+    <button onclick="uploadFile()">Procesar</button>
+    <pre id="results"></pre>
+
+    <script>
+        async function uploadFile() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Por favor, selecciona un archivo CSV.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const csvContent = e.target.result;
+                const vercelFunctionUrl = 'https://[TU_PROYECTO_EN_VERCEL].vercel.app/api/process-sales'; // ¡REEMPLAZA ESTO!
+
+                try {
+                    const response = await fetch(vercelFunctionUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/csv' // O 'text/plain'
+                        },
+                        body: csvContent
+                    });
+
+                    const data = await response.json();
+                    document.getElementById('results').textContent = JSON.stringify(data, null, 2);
+
+                } catch (error) {
+                    document.getElementById('results').textContent = 'Error: ' + error.message;
+                    console.error('Error:', error);
+                }
+            };
+            reader.readAsText(file); // Lee el archivo como texto
+        }
+    </script>
+</body>
+</html>
