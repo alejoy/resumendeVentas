@@ -4,15 +4,16 @@ import json
 import io
 
 def process_sales_data(file_content):
-    # Usar io.StringIO para leer el contenido del archivo como si fuera un archivo
+    # Usar io.BytesIO para leer el contenido binario del archivo Excel
     try:
-        df = pd.read_csv(io.StringIO(file_content))
+        # pd.read_excel espera un objeto tipo archivo binario
+        df = pd.read_excel(io.BytesIO(file_content))
     except Exception as e:
-        raise ValueError(f"Error al leer el CSV. Asegúrate de que el formato sea correcto: {e}")
+        raise ValueError(f"Error al leer el archivo Excel. Asegúrate de que el formato sea correcto y que es un .xlsx válido: {e}")
 
     # Verificar si las columnas esperadas existen
     if 'Cliente' not in df.columns or 'Productos' not in df.columns:
-        raise ValueError("El archivo CSV debe contener las columnas 'Cliente' y 'Productos'.")
+        raise ValueError("El archivo Excel debe contener las columnas 'Cliente' y 'Productos'.")
 
     product_counts = {}
     processed_data = []
@@ -20,12 +21,14 @@ def process_sales_data(file_content):
     # Iterar a través de cada fila para extraer productos y contarlos
     for index, row in df.iterrows():
         customer_name = str(row['Cliente']) # Asegurar que el nombre del cliente sea una cadena
-        products_str = str(row['Productos']) # Asegurar que la columna de productos sea una cadena
+        # Asegurar que la columna de productos sea una cadena, manejando NaN si es necesario
+        products_str = str(row['Productos']) if pd.notna(row['Productos']) else ""
 
         current_row_products = {'Cliente': customer_name}
 
         # Dividir la cadena de productos en elementos individuales
-        product_list = products_str.split(',')
+        # Solo si products_str no está vacío
+        product_list = products_str.split(',') if products_str else []
 
         for product_item in product_list:
             # Limpiar el string del producto (eliminar "1x ", espacios, SKU)
@@ -68,18 +71,18 @@ def process_sales_data(file_content):
 def handler(request):
     try:
         if request.method == 'POST':
-            # Leer el contenido del archivo desde el cuerpo de la solicitud
-            # Asumimos que el cliente enviará el contenido del CSV directamente en el body
-            csv_content = request.body.decode('utf-8')
+            # Leer el contenido binario del archivo desde el cuerpo de la solicitud
+            # Para archivos XLSX, el body debe ser enviado como bytes (raw binary data)
+            file_content = request.body # El body de la solicitud ya viene en bytes
 
-            if not csv_content.strip(): # Verificar si el contenido está vacío o solo espacios en blanco
-                return json.dumps({"error": "No se recibió contenido de archivo CSV en el cuerpo de la solicitud."}), 400, {'Content-Type': 'application/json'}
+            if not file_content:
+                return json.dumps({"error": "No se recibió contenido de archivo Excel en el cuerpo de la solicitud."}), 400, {'Content-Type': 'application/json'}
 
-            results = process_sales_data(csv_content)
+            results = process_sales_data(file_content)
 
             return json.dumps(results), 200, {'Content-Type': 'application/json'}
         else:
-            return json.dumps({"message": "Método no permitido. Por favor, envía una solicitud POST con el contenido del CSV en el cuerpo."}), 405, {'Content-Type': 'application/json'}
+            return json.dumps({"message": "Método no permitido. Por favor, envía una solicitud POST con el contenido del archivo Excel en el cuerpo."}), 405, {'Content-Type': 'application/json'}
 
     except ValueError as ve:
         # Errores específicos de validación de datos
