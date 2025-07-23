@@ -1,15 +1,1 @@
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/process_sales.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/process-sales",
-      "dest": "api/process_sales.py"
-    }
-  ]
-}
+
