@@ -713,7 +713,7 @@
         }
         
         function displayDetailedView() {
-            let html = '<table id="detailedTableData"><thead><tr><th>Fecha</th><th>Cliente</th><th>Email</th><th>Estado Pago</th><th>Total</th><th>Productos</th></tr></thead><tbody>';
+            let html = '<table id="detailedTableData"><thead><tr><th>Fecha</th><th>Cliente</th><th>Estado Envío</th><th>Estado Pago</th><th>Total</th><th>Productos</th></tr></thead><tbody>';
             
             salesData.forEach(row => {
                 const productos = row.Productos || '';
@@ -727,12 +727,21 @@
                     return display;
                 }).join('<br>');
                 
+                // Determinar el estado de envío
+                let estadoEnvio = row.Envío || row['Estado de envío'] || '-';
+                let metodoEnvio = row['Método de envío'] || '';
+                
+                // Combinar estado y método si ambos existen
+                if (estadoEnvio !== '-' && metodoEnvio && metodoEnvio !== estadoEnvio) {
+                    estadoEnvio = `${estadoEnvio} (${metodoEnvio})`;
+                }
+                
                 html += `<tr>
                     <td>${row.Fecha || '-'}</td>
                     <td><strong>${row.Cliente || '-'}</strong></td>
-                    <td>${row.Email || '-'}</td>
+                    <td>${estadoEnvio}</td>
                     <td>${row.Pago || '-'}</td>
-                    <td>$${row['Total (sin envío)'] || '0'}</td>
+                    <td>${row['Total (sin envío)'] || '0'}</td>
                     <td>${productosDisplay}</td>
                 </tr>`;
             });
