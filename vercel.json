@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/process_sales.py": {
+      "runtime": "python3.9" // O la versión de Python que prefieras (ej. python3.10, python3.11)
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/process-sales",
+      "dest": "/api/process_sales.py"
+    }
+  ]
+}
