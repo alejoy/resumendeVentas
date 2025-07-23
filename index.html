@@ -4,44 +4,38 @@
     <title>Subir y Procesar Ventas</title>
 </head>
 <body>
-    <h1>Cargar Archivo de Ventas CSV</h1>
-    <input type="file" id="csvFile" accept=".csv" />
+    <h1>Cargar Archivo de Ventas Excel</h1>
+    <input type="file" id="excelFile" accept=".xlsx" /> 
     <button onclick="uploadFile()">Procesar</button>
     <pre id="results"></pre>
 
     <script>
         async function uploadFile() {
-            const fileInput = document.getElementById('csvFile');
+            // Asegúrate de que el ID coincida con el input de arriba
+            const fileInput = document.getElementById('excelFile'); 
             const file = fileInput.files[0];
 
             if (!file) {
-                alert('Por favor, selecciona un archivo CSV.');
+                alert('Por favor, selecciona un archivo Excel (.xlsx).');
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const csvContent = e.target.result;
-                const vercelFunctionUrl = 'https://[TU_PROYECTO_EN_VERCEL].vercel.app/api/process-sales'; // ¡REEMPLAZA ESTO!
+            // ¡REEMPLAZA ESTO con la URL de tu función de Vercel!
+            const vercelFunctionUrl = 'https://[TU_PROYECTO_EN_VERCEL].vercel.app/api/process-sales'; 
 
-                try {
-                    const response = await fetch(vercelFunctionUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'text/csv' // O 'text/plain'
-                        },
-                        body: csvContent
-                    });
+            try {
+                const response = await fetch(vercelFunctionUrl, {
+                    method: 'POST',
+                    body: file // Envía el objeto File directamente
+                });
 
-                    const data = await response.json();
-                    document.getElementById('results').textContent = JSON.stringify(data, null, 2);
+                const data = await response.json();
+                document.getElementById('results').textContent = JSON.stringify(data, null, 2);
 
-                } catch (error) {
-                    document.getElementById('results').textContent = 'Error: ' + error.message;
-                    console.error('Error:', error);
-                }
-            };
-            reader.readAsText(file); // Lee el archivo como texto
+            } catch (error) {
+                document.getElementById('results').textContent = 'Error: ' + error.message;
+                console.error('Error:', error);
+            }
         }
     </script>
 </body>
