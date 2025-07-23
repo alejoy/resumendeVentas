@@ -3,6 +3,9 @@ import pandas as pd
 import json
 import io
 
+# Se elimina la importación de BaseHTTPRequestHandler ya que no es necesaria
+# para el objeto 'request' proporcionado por el entorno de Vercel.
+
 def process_sales_data(file_content):
     """
     Procesa el contenido de un archivo Excel (XLSX) de ventas, organizando productos por cliente
@@ -88,6 +91,8 @@ def handler(request):
 
     Args:
         request: El objeto de solicitud HTTP recibido por la función serverless.
+                 Este objeto es proporcionado por el entorno de Vercel y contiene
+                 atributos como 'method' y 'body'.
 
     Returns:
         tuple: Una tupla que contiene:
@@ -98,7 +103,6 @@ def handler(request):
     try:
         if request.method == 'POST':
             # Leer el contenido binario del archivo desde el cuerpo de la solicitud
-            # Para archivos XLSX, el body debe ser enviado como bytes (raw binary data)
             file_content = request.body # El body de la solicitud ya viene en bytes
 
             if not file_content:
