@@ -249,7 +249,7 @@
             <h3>📁 Sube tu archivo Excel (.xlsx) o CSV</h3>
             <p>Arrastra y suelta el archivo aquí o haz clic para seleccionar</p>
             <p><small>✅ Soporta: .xlsx, .xls, .csv</small></p>
-            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+            <button class="upload-btn" onclick="console.log('Botón clickeado'); document.getElementById('fileInput').click();">
                 Seleccionar Archivo
             </button>
             <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
@@ -315,36 +315,56 @@
         let productSummary = {};
         let clientProducts = {};
         
-        // Configurar eventos de drag and drop
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFile(files[0]);
-            }
-        });
-        
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
-            }
+        // Configurar eventos de drag and drop y file input
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            console.log('Configurando eventos...');
+            
+            // Eventos de drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.add('dragover');
+                console.log('Drag over detectado');
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('dragover');
+                console.log('Drop detectado, archivos:', e.dataTransfer.files.length);
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    console.log('Procesando archivo dropeado:', files[0].name);
+                    handleFile(files[0]);
+                }
+            });
+            
+            // Evento de click en área de upload
+            uploadArea.addEventListener('click', (e) => {
+                console.log('Click en upload area');
+                fileInput.click();
+            });
+            
+            // Evento de cambio en input file
+            fileInput.addEventListener('change', (e) => {
+                console.log('File input change detectado, archivos:', e.target.files.length);
+                if (e.target.files.length > 0) {
+                    console.log('Procesando archivo seleccionado:', e.target.files[0].name);
+                    handleFile(e.target.files[0]);
+                }
+            });
+            
+            console.log('Eventos configurados correctamente');
         });
         
         function handleFile(file) {
@@ -696,3 +716,18 @@
                 </details>
             `;
         }
+        
+        // Procesar los datos del archivo paste.txt automáticamente
+        window.addEventListener('load', function() {
+            const pasteData = `#	Fecha	Cliente	Email	Teléfono	Pago	Método de pago	Envío	Método de envío	Costo de envío	Total (sin envío)	Tipo de envío	Sucursal	Envío - Nombre	Envío - Apellido	Envío - Tipo de documento	Envío - Número de documento	Envío - Calle	Envío - Número	Envío - Piso	Envío - Dpto	Envío - Ciudad	Envío - Provincia	Envío - CP	Fact - Razón social	Fact - Tipo de documento	Fact - Número de documento	Fact - Calle	Fact - Número	Fact - Piso	Fact - Dpto	Fact - Ciudad	Fact - Provincia	Fact - CP	Facturada	Observaciones	Productos
+21	23/07/25 15:14	Gabriela Uriarte	arq.gabrielauriarte@gmail.com	542995473222	Finalizado	Transferencia / Depósito	Pendiente de retiro	Ohana	0	21375			Gabriela	Uriarte	DNI	35492169							8300	Gabriela Uriarte	DNI	35492169	Ernesto Sabato	1322			Neuquen	NEUQUEN	8300	No		1x Milanesas (Variedad: Arroz yamani,Unidades: 6) (SKU: -),1x Hamburguesas x 12u (Variedad: Surtido) (SKU: -)
+20	23/07/25 14:01	Marcela Corbelle	xxx@xxx.com.ar	2994096476	Pendiente	Acordar pago	Pendiente	Acordar envío	0	32000	Domicilio		Marcela	Corbelle	DNI	22665588								Marcela Corbelle	DNI	22665588								No		2x Hamburguesas x 12u (Variedad: Surtido) (SKU: -)
+19	23/07/25 12:50	Ariana Sanchez	arq.asanchezgarcia@gmail.com	542995800842	Finalizado	Ualá Bis	Pendiente de retiro	Ohana	0	30350			Ariana	Sanchez	DNI	35492835							8300	Ariana Sanchez	DNI	35492835	Rio Negro	488			Neuquen	NEUQUEN	8300	No		1x Lentejas (Peso: 1kg) (SKU: -),1x Milanesas (Variedad: Arroz yamani,Unidades: 6) (SKU: -),1x Hamburguesas x 12u (Variedad: Surtido) (SKU: -),1x Paté de lentejas (Peso: 150grs) (SKU: -)
+18	23/07/25 12:40	Olivia Lazar	xxx@xxx.com.ar	2994650254	Pendiente	Acordar pago	Pendiente	Acordar envío	0	12500	Domicilio		Olivia	Lazar	DNI	22654789								Olivia Lazar	DNI	22654789								No		1x Granola (Sabor: Coco rallado,Peso: 250grs) (SKU: -),1x Granola (Sabor: Pasas de uva,Peso: 250grs) (SKU: -),1x Hummus (Peso: 150grs) (SKU: -)
+17	23/07/25 12:22	Gabriela Muniain	xxx@xxx.com.ar	2974575166	Pendiente	Acordar pago	Pendiente	Acordar envío	0	14000	Domicilio		Gabriela	Muniain	DNI	22666999	Juan Diaz De Solis	3491	4		Neuquen	NEUQUEN	8300	Gabriela Muniain	DNI	22666999					Neuquén	NEUQUEN	8300	No		1x Pan integral de zanahoria (SKU: -),1x Pan integral de semillas (SKU: -)
+16	23/07/25 11:51	Denis Serpillo	dfserpillo@hotmail.com	542996575680	Finalizado	Transferencia / Depósito	Pendiente	Envio Ohana	2000	37525	Domicilio		Denis	Serpillo	DNI	38497071	Soldado Desconocido	471			Neuquén	NEUQUEN	8300	Denis Serpillo	DNI	38497071	Soldado Desconocido	471			Neuquén	NEUQUEN	8300	No		1x Budín de limón y arándanos (SKU: -),1x Milanesas (Variedad: Arroz yamani,Unidades: 12) (SKU: -),1x Hamburguesas x 12u (Variedad: Surtido) (SKU: -)
+15	23/07/25 10:05	Nora Bonino	xxx@xxx.com.ar	2995761237	Pendiente	Acordar pago	Pendiente	Acordar envío	0	6500	Domicilio		Nora	Bonino	DNI	22556887								Nora Bonino	DNI	22556887								No		1x Budin integral de quinoa y coco (SKU: -)
+13	22/07/25 21:23	Deborah Roman	deby_nqn_07@hotmail.com	542995800011	Finalizado	Transferencia / Depósito	Pendiente	Envios Ohana	0	44289	Domicilio		Deborah	Roman	DNI	17238832	Antu Ruca	2195			Neuquen	NEUQUEN	8300	Deborah Roman	DNI	17238832	Antu Ruca	2195			Neuquen	NEUQUEN	8300	No		4x Yerba agroecologica Grapia Milenaria (Peso: 1kg) (SKU: -),1x Granola (Sabor: Coco rallado,Peso: 500grs) (SKU: -),1x Enriquecedor (Peso: 200grs) (SKU: -),1x Mix para saborizar (Peso: 100grs) (SKU: -),1x Hamburguesas x 6u (Variedad: Surtido) (SKU: -)
+12	22/07/25 17:36	Antonella Krog	notiene@notiene.com.ar	2994601247	Finalizado	Acordar pago	Enviado	Acordar envío	0	25600	Domicilio		Antonella	Krog	DNI	38798424								Antonella Krog	DNI	38798424								No		2x Yerba agroecologica Grapia Milenaria (Peso: 1kg) (SKU: -),1x Coco rallado (Peso: 1kg) (SKU: -)
+11	22/07/25 14:40	Laura Malaga	pampa_mariola@hotmail.com	542994095764	Finalizado	Transferencia / Depósito	Pendiente de retiro	Ohana	0	30780			Laura	Malaga	DNI	29757186							8316	Laura Malaga	DNI	29757186	Borges	7642			Plottier	NEUQUEN	8316	No		1x Pan integral de semillas (SKU: -),1x Grisines integrales 200grs (Sabor: Surtido) (SKU: -),1x Hamburguesas x 12u (Variedad: Surtido) (SKU: -),1x Hummus (Peso: 150grs) (SKU: -),1x Paté de lentejas (Peso: 150grs) (SKU: -)
+9	22/07/25 13:15	Cecilia Arroyo	ceciarroyo@yahoo.com.ar	542
