@@ -4,6 +4,19 @@ import json
 import io
 
 def process_sales_data(file_content):
+    """
+    Procesa el contenido de un archivo Excel (XLSX) de ventas, organizando productos por cliente
+    y calculando el recuento total de cada producto.
+
+    Args:
+        file_content (bytes): El contenido binario del archivo XLSX.
+
+    Returns:
+        dict: Un diccionario con dos claves:
+              - 'productos_por_cliente': Una lista de diccionarios, donde cada diccionario
+                                         representa un cliente y sus productos (1 si lo compró, 0 si no).
+              - 'recuento_total_productos': Una lista de diccionarios con el recuento total de cada producto.
+    """
     # Usar io.BytesIO para leer el contenido binario del archivo Excel
     try:
         # pd.read_excel espera un objeto tipo archivo binario
@@ -69,6 +82,19 @@ def process_sales_data(file_content):
     }
 
 def handler(request):
+    """
+    Función principal para el despliegue en Vercel.
+    Espera el contenido binario de un archivo Excel (XLSX) en el cuerpo de una solicitud POST.
+
+    Args:
+        request: El objeto de solicitud HTTP recibido por la función serverless.
+
+    Returns:
+        tuple: Una tupla que contiene:
+               - str: Los resultados procesados en formato JSON.
+               - int: El código de estado HTTP.
+               - dict: Los encabezados HTTP.
+    """
     try:
         if request.method == 'POST':
             # Leer el contenido binario del archivo desde el cuerpo de la solicitud
