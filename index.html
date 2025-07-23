@@ -242,6 +242,24 @@
             font-weight: bold;
         }
         
+        .weight-badge {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .unit-badge {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
         .debug-info {
             background: #f8f9fa;
             border: 1px solid #ddd;
@@ -250,6 +268,12 @@
             margin: 10px 0;
             font-family: monospace;
             font-size: 12px;
+        }
+        
+        .product-detail {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -277,8 +301,8 @@
                     <div class="stat-label">Productos Únicos</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="totalQuantity">0</div>
-                    <div class="stat-label">Cantidad Total</div>
+                    <div class="stat-number" id="totalWeight">0</div>
+                    <div class="stat-label">Total Kg</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number" id="totalSales">0</div>
@@ -327,6 +351,7 @@
         let salesData = [];
         let productSummary = {};
         let clientProducts = {};
+        let totalWeightKg = 0;
         
         function debugLog(message) {
             console.log(message);
@@ -417,7 +442,6 @@
                 
                 debugLog(`🏷️ Headers: ${headers.join(', ')}`);
                 
-                // Verificar columna de productos
                 const productosIndex = headers.findIndex(h => 
                     h && h.toString().toLowerCase().includes('producto')
                 );
@@ -426,7 +450,6 @@
                     throw new Error('No se encontró columna "Productos"');
                 }
                 
-                // Crear datos procesados
                 const processedData = rows.map(row => {
                     const obj = {};
                     headers.forEach((header, index) => {
@@ -477,10 +500,68 @@
             });
         }
         
+        function parseProductInfo(productStr) {
+            // Función mejorada para extraer información de productos
+            const products = [];
+            
+            // Regex más específico para capturar peso y unidades
+            const productoRegex = /(\d+)x\s*([^()]+?)(?:\s*\(([^)]*)\))?\s*(?:\(SKU:[^)]*\))?(?:,|$)/g;
+            let match;
+            
+            while ((match = productoRegex.exec(productStr)) !== null) {
+                const cantidad = parseInt(match[1]) || 1;
+                let producto = match[2].trim().replace(/\s+/g, ' ');
+                const detalles = match[3] || '';
+                
+                if (producto) {
+                    // Extraer peso si está en los detalles
+                    let peso = null;
+                    let unidades = null;
+                    let variedad = '';
+                    
+                    if (detalles) {
+                        // Buscar peso (kg, grs, gramos)
+                        const pesoMatch = detalles.match(/(?:Peso:\s*)?(\d+(?:\.\d+)?)\s*(kg|grs?|gramos?)/i);
+                        if (pesoMatch) {
+                            peso = parseFloat(pesoMatch[1]);
+                            const unidad = pesoMatch[2].toLowerCase();
+                            if (unidad.includes('gr')) {
+                                peso = peso / 1000; // convertir a kg
+                            }
+                        }
+                        
+                        // Buscar unidades
+                        const unidadesMatch = detalles.match(/Unidades:\s*(\d+)/i);
+                        if (unidadesMatch) {
+                            unidades = parseInt(unidadesMatch[1]);
+                        }
+                        
+                        // Buscar variedad
+                        const variedadMatch = detalles.match(/Variedad:\s*([^,]+)/i);
+                        if (variedadMatch) {
+                            variedad = variedadMatch[1].trim();
+                        }
+                    }
+                    
+                    products.push({
+                        nombre: producto,
+                        cantidad: cantidad,
+                        peso: peso,
+                        unidades: unidades,
+                        variedad: variedad,
+                        detalles: detalles
+                    });
+                }
+            }
+            
+            return products;
+        }
+        
         function processData() {
             debugLog('🔄 Procesando datos de ventas...');
             productSummary = {};
             clientProducts = {};
+            totalWeightKg = 0;
             
             salesData.forEach((row, index) => {
                 const cliente = (row.Cliente || row.cliente || '').toString().trim();
@@ -494,31 +575,61 @@
                     clientProducts[cliente] = {};
                 }
                 
-                const productoRegex = /(\d+)x\s*([^()]+?)(?:\s*\([^)]*\))?\s*(?:\(SKU:[^)]*\))?(?:,|$)/g;
-                let match;
-                let productosEncontrados = 0;
+                const productos = parseProductInfo(productosStr);
                 
-                while ((match = productoRegex.exec(productosStr)) !== null) {
-                    const cantidad = parseInt(match[1]) || 1;
-                    let producto = match[2].trim().replace(/\s+/g, ' ');
+                productos.forEach(prod => {
+                    const key = prod.nombre;
                     
-                    if (producto) {
-                        productosEncontrados++;
-                        
-                        if (!productSummary[producto]) {
-                            productSummary[producto] = 0;
-                        }
-                        productSummary[producto] += cantidad;
-                        
-                        if (!clientProducts[cliente][producto]) {
-                            clientProducts[cliente][producto] = 0;
-                        }
-                        clientProducts[cliente][producto] += cantidad;
+                    if (!productSummary[key]) {
+                        productSummary[key] = {
+                            cantidad: 0,
+                            peso: 0,
+                            unidades: 0,
+                            tieneVariedad: false,
+                            variedades: new Set(),
+                            productos: []
+                        };
                     }
-                }
+                    
+                    productSummary[key].cantidad += prod.cantidad;
+                    productSummary[key].productos.push(prod);
+                    
+                    if (prod.peso) {
+                        productSummary[key].peso += prod.peso * prod.cantidad;
+                        totalWeightKg += prod.peso * prod.cantidad;
+                    }
+                    
+                    if (prod.unidades) {
+                        productSummary[key].unidades += prod.unidades * prod.cantidad;
+                    }
+                    
+                    if (prod.variedad) {
+                        productSummary[key].tieneVariedad = true;
+                        productSummary[key].variedades.add(prod.variedad);
+                    }
+                    
+                    // Para clientes
+                    if (!clientProducts[cliente][key]) {
+                        clientProducts[cliente][key] = {
+                            cantidad: 0,
+                            peso: 0,
+                            unidades: 0,
+                            productos: []
+                        };
+                    }
+                    
+                    clientProducts[cliente][key].cantidad += prod.cantidad;
+                    if (prod.peso) {
+                        clientProducts[cliente][key].peso += prod.peso * prod.cantidad;
+                    }
+                    if (prod.unidades) {
+                        clientProducts[cliente][key].unidades += prod.unidades * prod.cantidad;
+                    }
+                    clientProducts[cliente][key].productos.push(prod);
+                });
             });
             
-            debugLog(`✅ Procesados: ${Object.keys(productSummary).length} productos únicos, ${Object.keys(clientProducts).length} clientes`);
+            debugLog(`✅ Procesados: ${Object.keys(productSummary).length} productos únicos, ${Object.keys(clientProducts).length} clientes, ${totalWeightKg.toFixed(2)}kg total`);
         }
         
         function displayResults() {
@@ -526,12 +637,11 @@
             
             const totalClients = Object.keys(clientProducts).length;
             const totalProducts = Object.keys(productSummary).length;
-            const totalQuantity = Object.values(productSummary).reduce((sum, qty) => sum + qty, 0);
             const totalSales = salesData.length;
             
             document.getElementById('totalClients').textContent = totalClients;
             document.getElementById('totalProducts').textContent = totalProducts;
-            document.getElementById('totalQuantity').textContent = totalQuantity;
+            document.getElementById('totalWeight').textContent = totalWeightKg.toFixed(1);
             document.getElementById('totalSales').textContent = totalSales;
             
             displayProductSummary();
@@ -543,18 +653,21 @@
         
         function displayProductSummary() {
             const sortedProducts = Object.entries(productSummary)
-                .sort((a, b) => b[1] - a[1]);
+                .sort((a, b) => b[1].cantidad - a[1].cantidad);
             
-            let html = '<table id="productTableData"><thead><tr><th>Producto</th><th>Cantidad Total</th><th>% del Total</th></tr></thead><tbody>';
+            let html = '<table id="productTableData"><thead><tr><th>Producto</th><th>Cantidad</th><th>Peso Total</th><th>Unidades</th><th>Detalles</th></tr></thead><tbody>';
             
-            const totalQty = Object.values(productSummary).reduce((sum, qty) => sum + qty, 0);
-            
-            sortedProducts.forEach(([producto, cantidad]) => {
-                const porcentaje = ((cantidad / totalQty) * 100).toFixed(1);
+            sortedProducts.forEach(([producto, info]) => {
+                const pesoDisplay = info.peso > 0 ? `<span class="weight-badge">${info.peso.toFixed(2)} kg</span>` : '-';
+                const unidadesDisplay = info.unidades > 0 ? `<span class="unit-badge">${info.unidades}</span>` : '-';
+                const variedades = info.tieneVariedad ? Array.from(info.variedades).join(', ') : '';
+                
                 html += `<tr>
-                    <td>${producto}</td>
-                    <td><span class="quantity-badge">${cantidad}</span></td>
-                    <td>${porcentaje}%</td>
+                    <td><strong>${producto}</strong></td>
+                    <td><span class="quantity-badge">${info.cantidad}</span></td>
+                    <td>${pesoDisplay}</td>
+                    <td>${unidadesDisplay}</td>
+                    <td><div class="product-detail">${variedades}</div></td>
                 </tr>`;
             });
             
@@ -569,16 +682,27 @@
             allProducts.forEach(producto => {
                 html += `<th>${producto}</th>`;
             });
-            html += '<th>Total Items</th></tr></thead><tbody>';
+            html += '<th>Total</th></tr></thead><tbody>';
             
             Object.entries(clientProducts).forEach(([cliente, productos]) => {
                 html += `<tr><td><strong>${cliente}</strong></td>`;
                 let totalItems = 0;
                 
                 allProducts.forEach(producto => {
-                    const cantidad = productos[producto] || 0;
-                    totalItems += cantidad;
-                    html += `<td>${cantidad > 0 ? `<span class="quantity-badge">${cantidad}</span>` : '-'}</td>`;
+                    const info = productos[producto];
+                    if (info) {
+                        totalItems += info.cantidad;
+                        let display = `${info.cantidad}`;
+                        if (info.peso > 0) {
+                            display += ` (${info.peso.toFixed(2)}kg)`;
+                        }
+                        if (info.unidades > 0) {
+                            display += ` [${info.unidades}u]`;
+                        }
+                        html += `<td><span class="quantity-badge">${display}</span></td>`;
+                    } else {
+                        html += `<td>-</td>`;
+                    }
                 });
                 
                 html += `<td><strong>${totalItems}</strong></td></tr>`;
@@ -593,7 +717,15 @@
             
             salesData.forEach(row => {
                 const productos = row.Productos || '';
-                const productosLimpio = productos.replace(/\([^)]*\)/g, '').replace(/,/g, ', ');
+                const parsedProducts = parseProductInfo(productos);
+                
+                let productosDisplay = parsedProducts.map(p => {
+                    let display = `${p.cantidad}x ${p.nombre}`;
+                    if (p.peso) display += ` (${p.peso}kg)`;
+                    if (p.unidades) display += ` [${p.unidades}u]`;
+                    if (p.variedad) display += ` - ${p.variedad}`;
+                    return display;
+                }).join('<br>');
                 
                 html += `<tr>
                     <td>${row.Fecha || '-'}</td>
@@ -601,7 +733,7 @@
                     <td>${row.Email || '-'}</td>
                     <td>${row.Pago || '-'}</td>
                     <td>$${row['Total (sin envío)'] || '0'}</td>
-                    <td>${productosLimpio}</td>
+                    <td>${productosDisplay}</td>
                 </tr>`;
             });
             
@@ -679,7 +811,9 @@
             const sampleData = `#,Fecha,Cliente,Email,Teléfono,Pago,Método de pago,Envío,Método de envío,Costo de envío,Total (sin envío),Tipo de envío,Sucursal,Envío - Nombre,Envío - Apellido,Envío - Tipo de documento,Envío - Número de documento,Envío - Calle,Envío - Número,Envío - Piso,Envío - Dpto,Envío - Ciudad,Envío - Provincia,Envío - CP,Fact - Razón social,Fact - Tipo de documento,Fact - Número de documento,Fact - Calle,Fact - Número,Fact - Piso,Fact - Dpto,Fact - Ciudad,Fact - Provincia,Fact - CP,Facturada,Observaciones,Productos
 21,23/07/25 15:14,Gabriela Uriarte,arq.gabrielauriarte@gmail.com,542995473222,Finalizado,Transferencia / Depósito,Pendiente de retiro,Ohana,0,21375,,,Gabriela,Uriarte,DNI,35492169,,,,,,,8300,Gabriela Uriarte,DNI,35492169,Ernesto Sabato,1322,,,Neuquen,NEUQUEN,8300,No,,"1x Milanesas (Variedad: Arroz yamani,Unidades: 6) (SKU: -),1x Hamburguesas x 12u (Variedad: Surtido) (SKU: -)"
 20,23/07/25 14:01,Marcela Corbelle,xxx@xxx.com.ar,2994096476,Pendiente,Acordar pago,Pendiente,Acordar envío,0,32000,Domicilio,,Marcela,Corbelle,DNI,22665588,,,,,,,,,Marcela Corbelle,DNI,22665588,,,,,,,,,No,,2x Hamburguesas x 12u (Variedad: Surtido) (SKU: -)
-19,23/07/25 12:50,Ariana Sanchez,arq.asanchezgarcia@gmail.com,542995800842,Finalizado,Ualá Bis,Pendiente de retiro,Ohana,0,30350,,,Ariana,Sanchez,DNI,35492835,,,,,,,8300,Ariana Sanchez,DNI,35492835,Rio Negro,488,,,Neuquen,NEUQUEN,8300,No,,"1x Lentejas (Peso: 1kg) (SKU: -),1x Milanesas (Variedad: Arroz yamani,Unidades: 6) (SKU: -),1x Hamburguesas x 12u (Variedad: Surtido) (SKU: -),1x Paté de lentejas (Peso: 150grs) (SKU: -)"`;
+19,23/07/25 12:50,Ariana Sanchez,arq.asanchezgarcia@gmail.com,542995800842,Finalizado,Ualá Bis,Pendiente de retiro,Ohana,0,30350,,,Ariana,Sanchez,DNI,35492835,,,,,,,8300,Ariana Sanchez,DNI,35492835,Rio Negro,488,,,Neuquen,NEUQUEN,8300,No,,"1x Lentejas (Peso: 1kg) (SKU: -),1x Milanesas (Variedad: Arroz yamani,Unidades: 6) (SKU: -),1x Hamburguesas x 12u (Variedad: Surtido) (SKU: -),1x Paté de lentejas (Peso: 150grs) (SKU: -)"
+18,22/07/25 18:30,Carlos Martinez,carlos.martinez@email.com,542994123456,Finalizado,Mercado Pago,Enviado,Correo,450,28900,Domicilio,,Carlos,Martinez,DNI,28123456,Belgrano,234,,,Cipolletti,RIO NEGRO,8324,Carlos Martinez,DNI,28123456,Belgrano,234,,,Cipolletti,RIO NEGRO,8324,Sí,,"2x Quinoa (Peso: 500grs) (SKU: -),1x Hamburguesas x 12u (Variedad: Vegetarianas) (SKU: -),3x Granola casera (Peso: 250grs) (SKU: -)"
+17,22/07/25 16:45,Ana Rodriguez,ana.rodriguez@gmail.com,542993987654,Finalizado,Transferencia,Pendiente de retiro,Ohana,0,19750,,,Ana,Rodriguez,DNI,31987654,,,,,,,8300,Ana Rodriguez,DNI,31987654,San Martin,567,,,Neuquen,NEUQUEN,8300,No,,"1x Milanesas (Variedad: Quinoa,Unidades: 8) (SKU: -),2x Paté de garbanzos (Peso: 200grs) (SKU: -)"`;
             
             processCsvData(sampleData);
         }
