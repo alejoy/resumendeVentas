@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/process_sales.py": {
-      "runtime": "now-python@3.9"
-    }
-  }
-}
