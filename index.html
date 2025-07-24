@@ -713,11 +713,19 @@
         }
         
         function displayDetailedView() {
-            let html = '<table id="detailedTableData"><thead><tr><th>Fecha</th><th>Cliente</th><th>Estado Envío</th><th>Estado Pago</th><th>Total</th><th>Productos</th></tr></thead><tbody>';
+            // Ordenar salesData por el tipo de envío
+            const sortedSalesData = [...salesData].sort((a, b) => {
+                const envioA = (a.Envío || a['Estado de envío'] || '').toString().trim().toLowerCase();
+                const envioB = (b.Envío || b['Estado de envío'] || '').toString().trim().toLowerCase();
+                return envioA.localeCompare(envioB);
+            });
+
+            let html = '<table id="detailedTableData"><thead><tr><th>Cliente</th><th>Dirección</th><th>Tipo de Envío</th><th>Estado Pago</th><th>Total</th><th>Productos</th></tr></thead><tbody>';
             
-            salesData.forEach(row => {
+            sortedSalesData.forEach(row => {
                 const productos = row.Productos || '';
                 const parsedProducts = parseProductInfo(productos);
+                const direccionCliente = row.Direccion || row.direccion || '-'; // Obtener la dirección del cliente
                 
                 let productosDisplay = parsedProducts.map(p => {
                     let display = `${p.cantidad}x ${p.nombre}`;
@@ -727,19 +735,13 @@
                     return display;
                 }).join('<br>');
                 
-                // Determinar el estado de envío
-                let estadoEnvio = row.Envío || row['Estado de envío'] || '-';
-                let metodoEnvio = row['Método de envío'] || '';
-                
-                // Combinar estado y método si ambos existen
-                if (estadoEnvio !== '-' && metodoEnvio && metodoEnvio !== estadoEnvio) {
-                    estadoEnvio = `${estadoEnvio} (${metodoEnvio})`;
-                }
+                // Determinar el tipo de envío (columna "Envío" o "Método de envío")
+                let tipoEnvio = row['Método de envío'] || row.Envío || row['Estado de envío'] || '-';
                 
                 html += `<tr>
-                    <td>${row.Fecha || '-'}</td>
                     <td><strong>${row.Cliente || '-'}</strong></td>
-                    <td>${estadoEnvio}</td>
+                    <td>${direccionCliente}</td>
+                    <td>${tipoEnvio}</td>
                     <td>${row.Pago || '-'}</td>
                     <td>${row['Total (sin envío)'] || '0'}</td>
                     <td>${productosDisplay}</td>
@@ -751,6 +753,8 @@
         }
         
         function showTab(tabName) {
+            console.log(`🔄 Cambiando a pestaña: ${tabName}`);
+            
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
@@ -760,7 +764,14 @@
             });
             
             document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+            // Encuentra el botón de la pestaña activa basándose en su 'onclick' o 'id'
+            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
+            
+            // Forzar actualización de la vista detallada cuando se selecciona
+            if (tabName === 'detailed') {
+                console.log('🔄 Forzando actualización de vista detallada');
+                displayDetailedView();
+            }
         }
         
         function filterTable(tableId, searchId) {
@@ -814,20 +825,21 @@
                 </details>
             `;
         }
-        
+
+        // --- Funcionalidad de datos de muestra (opcional) ---
         function loadSampleData() {
-            debugLog('🎯 Cargando datos de muestra...');
-            const sampleData = `#,Fecha,Cliente,Email,Teléfono,Pago,Método de pago,Envío,Método de envío,Costo de envío,Total (sin envío),Tipo de envío,Sucursal,Envío - Nombre,Envío - Apellido,Envío - Tipo de documento,Envío - Número de documento,Envío - Calle,Envío - Número,Envío - Piso,Envío - Dpto,Envío - Ciudad,Envío - Provincia,Envío - CP,Fact - Razón social,Fact - Tipo de documento,Fact - Número de documento,Fact - Calle,Fact - Número,Fact - Piso,Fact - Dpto,Fact - Ciudad,Fact - Provincia,Fact - CP,Facturada,Observaciones,Productos
-21,23/07/25 15:14,Gabriela Uriarte,arq.gabrielauriarte@gmail.com,542995473222,Finalizado,Transferencia / Depósito,Pendiente de retiro,Ohana,0,21375,,,Gabriela,Uriarte,DNI,35492169,,,,,,,8300,Gabriela Uriarte,DNI,35492169,Ernesto Sabato,1322,,,Neuquen,NEUQUEN,8300,No,,"1x Milanesas (Variedad: Arroz yamani,Unidades: 6) (SKU: -),1x Hamburguesas x 12u (Variedad: Surtido) (SKU: -)"
-20,23/07/25 14:01,Marcela Corbelle,xxx@xxx.com.ar,2994096476,Pendiente,Acordar pago,Pendiente,Acordar envío,0,32000,Domicilio,,Marcela,Corbelle,DNI,22665588,,,,,,,,,Marcela Corbelle,DNI,22665588,,,,,,,,,No,,2x Hamburguesas x 12u (Variedad: Surtido) (SKU: -)
-19,23/07/25 12:50,Ariana Sanchez,arq.asanchezgarcia@gmail.com,542995800842,Finalizado,Ualá Bis,Pendiente de retiro,Ohana,0,30350,,,Ariana,Sanchez,DNI,35492835,,,,,,,8300,Ariana Sanchez,DNI,35492835,Rio Negro,488,,,Neuquen,NEUQUEN,8300,No,,"1x Lentejas (Peso: 1kg) (SKU: -),1x Milanesas (Variedad: Arroz yamani,Unidades: 6) (SKU: -),1x Hamburguesas x 12u (Variedad: Surtido) (SKU: -),1x Paté de lentejas (Peso: 150grs) (SKU: -)"
-18,22/07/25 18:30,Carlos Martinez,carlos.martinez@email.com,542994123456,Finalizado,Mercado Pago,Enviado,Correo,450,28900,Domicilio,,Carlos,Martinez,DNI,28123456,Belgrano,234,,,Cipolletti,RIO NEGRO,8324,Carlos Martinez,DNI,28123456,Belgrano,234,,,Cipolletti,RIO NEGRO,8324,Sí,,"2x Quinoa (Peso: 500grs) (SKU: -),1x Hamburguesas x 12u (Variedad: Vegetarianas) (SKU: -),3x Granola casera (Peso: 250grs) (SKU: -)"
-17,22/07/25 16:45,Ana Rodriguez,ana.rodriguez@gmail.com,542993987654,Finalizado,Transferencia,Pendiente de retiro,Ohana,0,19750,,,Ana,Rodriguez,DNI,31987654,,,,,,,8300,Ana Rodriguez,DNI,31987654,San Martin,567,,,Neuquen,NEUQUEN,8300,No,,"1x Milanesas (Variedad: Quinoa,Unidades: 8) (SKU: -),2x Paté de garbanzos (Peso: 200grs) (SKU: -)"`;
+            debugLog('Cargando datos de muestra...');
+            const sampleCsv = `Cliente,Direccion,Productos,Estado de envío,Método de envío,Pago,Total (sin envío),Fecha
+"Cliente A","Calle Falsa 123",1x Producto X (Peso: 0.5kg, Unidades: 10),Enviado,Correo,Pagado,150.00,2025-07-20
+"Cliente B","Avenida Siempreviva 742",2x Producto Y (Peso: 1.2kg),Pendiente,Delivery,Pendiente,240.50,2025-07-21
+"Cliente C","Boulevard de los Sueños 456",1x Producto X (Peso: 0.5kg),Enviado,Retiro en Tienda,Pagado,150.00,2025-07-21
+"Cliente A","Calle Falsa 123",3x Producto Z (Peso: 0.1kg, Unidades: 5),Enviado,Correo,Pagado,75.00,2025-07-22
+"Cliente D","Pasaje Secreto 888",1x Producto Y (Peso: 1.2kg),Pendiente,Delivery,Pendiente,120.25,2025-07-23
+"Cliente B","Avenida Siempreviva 742",1x Producto X (Peso: 0.5kg),Enviado,Delivery,Pagado,150.00,2025-07-24
+"Cliente E","Ruta 9 KM 100",2x Producto A (Peso: 2kg),Pendiente,Correo,Pagado,300.00,2025-07-24`;
             
-            processCsvData(sampleData);
+            processCsvData(sampleCsv);
         }
-        
-        console.log('✅ Script cargado completamente');
     </script>
 </body>
 </html>
