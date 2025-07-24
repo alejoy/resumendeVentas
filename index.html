@@ -725,7 +725,30 @@
             sortedSalesData.forEach(row => {
                 const productos = row.Productos || '';
                 const parsedProducts = parseProductInfo(productos);
-                const direccionCliente = row.Direccion || row.direccion || '-'; // Obtener la dirección del cliente
+               let direccionParts = [];
+                const calle = (row['Envío - Calle'] || '').toString().trim();
+                const numero = (row['Envío - Número'] || '').toString().trim();
+                const piso = (row['Envío - Piso'] || '').toString().trim();
+                const dpto = (row['Envío - Dpto'] || '').toString().trim();
+
+                if (calle) {
+                    let streetAddress = calle;
+                    if (numero) {
+                        streetAddress += ' ' + numero;
+                    }
+                    direccionParts.push(streetAddress);
+                }
+
+                if (piso) {
+                    direccionParts.push('Piso ' + piso);
+                }
+                if (dpto) {
+                    direccionParts.push('Dpto ' + dpto);
+                }
+
+                // If no specific address parts are found, fallback to existing 'Direccion' or '-'
+                const direccionCliente = direccionParts.length > 0 ? direccionParts.join(', ') : (row.Direccion || row.direccion || '-');
+                // --- MODIFICACIÓN TERMINA AQUÍ ---
                 
                 let productosDisplay = parsedProducts.map(p => {
                     let display = `${p.cantidad}x ${p.nombre}`;
@@ -734,7 +757,7 @@
                     if (p.variedad) display += ` - ${p.variedad}`;
                     return display;
                 }).join('<br>');
-                
+
                 // Determinar el tipo de envío (columna "Envío" o "Método de envío")
                 let tipoEnvio = row['Método de envío'] || row.Envío || row['Estado de envío'] || '-';
                 
@@ -747,7 +770,7 @@
                     <td>${productosDisplay}</td>
                 </tr>`;
             });
-            
+
             html += '</tbody></table>';
             document.getElementById('detailedTable').innerHTML = html;
         }
