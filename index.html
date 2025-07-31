@@ -275,6 +275,28 @@
             color: #666;
             margin-top: 5px;
         }
+
+        .flavor-badge {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin: 2px;
+            display: inline-block;
+        }
+
+        .variety-badge {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin: 2px;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -318,7 +340,7 @@
             
             <div id="products" class="tab-content active">
                 <h3>🏆 Resumen Total de Productos</h3>
-                <input type="text" class="search-box" id="productSearch" placeholder="🔍 Buscar productos..." onkeyup="filterTable('productTable', 'productSearch')" />
+                <input type="text" class="search-box" id="productSearch" placeholder="🔍 Buscar por producto, variedad o sabor..." onkeyup="filterTable('productTable', 'productSearch')" />
                 <button class="export-btn" onclick="exportTable('productTable', 'resumen_productos')">📊 Exportar Resumen</button>
                 <div id="productTable"></div>
             </div>
@@ -518,6 +540,7 @@
                     let peso = null;
                     let unidades = null;
                     let variedad = '';
+                    let sabor = '';  // NUEVO: Agregar sabor
                     
                     if (detalles) {
                         // Buscar peso (kg, grs, gramos)
@@ -541,6 +564,12 @@
                         if (variedadMatch) {
                             variedad = variedadMatch[1].trim();
                         }
+
+                        // NUEVO: Buscar sabor
+                        const saborMatch = detalles.match(/Sabor:\s*([^,]+)/i);
+                        if (saborMatch) {
+                            sabor = saborMatch[1].trim();
+                        }
                     }
                     
                     products.push({
@@ -549,6 +578,7 @@
                         peso: peso,
                         unidades: unidades,
                         variedad: variedad,
+                        sabor: sabor,  // NUEVO: Incluir sabor en el objeto
                         detalles: detalles
                     });
                 }
@@ -587,6 +617,8 @@
                             unidades: 0,
                             tieneVariedad: false,
                             variedades: new Set(),
+                            tieneSabor: false,  // NUEVO: Agregar flag para sabor
+                            sabores: new Set(), // NUEVO: Set para sabores únicos
                             productos: []
                         };
                     }
@@ -606,6 +638,12 @@
                     if (prod.variedad) {
                         productSummary[key].tieneVariedad = true;
                         productSummary[key].variedades.add(prod.variedad);
+                    }
+
+                    // NUEVO: Manejar sabores
+                    if (prod.sabor) {
+                        productSummary[key].tieneSabor = true;
+                        productSummary[key].sabores.add(prod.sabor);
                     }
                     
                     // Para clientes
@@ -660,14 +698,28 @@
             sortedProducts.forEach(([producto, info]) => {
                 const pesoDisplay = info.peso > 0 ? `<span class="weight-badge">${info.peso.toFixed(2)} kg</span>` : '-';
                 const unidadesDisplay = info.unidades > 0 ? `<span class="unit-badge">${info.unidades}</span>` : '-';
-                const variedades = info.tieneVariedad ? Array.from(info.variedades).join(', ') : '';
+                
+                // NUEVO: Mostrar variedades y sabores con badges diferentes
+                let detallesDisplay = '';
+                if (info.tieneVariedad) {
+                    const variedades = Array.from(info.variedades).map(v => 
+                        `<span class="variety-badge">🌱 ${v}</span>`
+                    ).join(' ');
+                    detallesDisplay += variedades;
+                }
+                if (info.tieneSabor) {
+                    const sabores = Array.from(info.sabores).map(s => 
+                        `<span class="flavor-badge">👅 ${s}</span>`
+                    ).join(' ');
+                    detallesDisplay += (detallesDisplay ? '<br>' : '') + sabores;
+                }
                 
                 html += `<tr>
                     <td><strong>${producto}</strong></td>
                     <td><span class="quantity-badge">${info.cantidad}</span></td>
                     <td>${pesoDisplay}</td>
                     <td>${unidadesDisplay}</td>
-                    <td><div class="product-detail">${variedades}</div></td>
+                    <td><div class="product-detail">${detallesDisplay}</div></td>
                 </tr>`;
             });
             
@@ -716,153 +768,4 @@
             // Ordenar salesData por el tipo de envío
             const sortedSalesData = [...salesData].sort((a, b) => {
                 const envioA = (a.Envío || a['Estado de envío'] || '').toString().trim().toLowerCase();
-                const envioB = (b.Envío || b['Estado de envío'] || '').toString().trim().toLowerCase();
-                return envioA.localeCompare(envioB);
-            });
-
-            let html = '<table id="detailedTableData"><thead><tr><th>Cliente</th><th>Dirección</th><th>Tipo de Envío</th><th>Estado Pago</th><th>Total</th><th>Productos</th></tr></thead><tbody>';
-            
-            sortedSalesData.forEach(row => {
-                const productos = row.Productos || '';
-                const parsedProducts = parseProductInfo(productos);
-               let direccionParts = [];
-                const calle = (row['Envío - Calle'] || '').toString().trim();
-                const numero = (row['Envío - Número'] || '').toString().trim();
-                const piso = (row['Envío - Piso'] || '').toString().trim();
-                const dpto = (row['Envío - Dpto'] || '').toString().trim();
-
-                if (calle) {
-                    let streetAddress = calle;
-                    if (numero) {
-                        streetAddress += ' ' + numero;
-                    }
-                    direccionParts.push(streetAddress);
-                }
-
-                if (piso) {
-                    direccionParts.push('Piso ' + piso);
-                }
-                if (dpto) {
-                    direccionParts.push('Dpto ' + dpto);
-                }
-
-                // If no specific address parts are found, fallback to existing 'Direccion' or '-'
-                const direccionCliente = direccionParts.length > 0 ? direccionParts.join(', ') : (row.Direccion || row.direccion || '-');
-                // --- MODIFICACIÓN TERMINA AQUÍ ---
-                
-                let productosDisplay = parsedProducts.map(p => {
-                    let display = `${p.cantidad}x ${p.nombre}`;
-                    if (p.peso) display += ` (${p.peso}kg)`;
-                    if (p.unidades) display += ` [${p.unidades}u]`;
-                    if (p.variedad) display += ` - ${p.variedad}`;
-                    return display;
-                }).join('<br>');
-
-                // Determinar el tipo de envío (columna "Envío" o "Método de envío")
-                let tipoEnvio = row['Método de envío'] || row.Envío || row['Estado de envío'] || '-';
-                
-                html += `<tr>
-                    <td><strong>${row.Cliente || '-'}</strong></td>
-                    <td>${direccionCliente}</td>
-                    <td>${tipoEnvio}</td>
-                    <td>${row.Pago || '-'}</td>
-                    <td>${row['Total (sin envío)'] || '0'}</td>
-                    <td>${productosDisplay}</td>
-                </tr>`;
-            });
-
-            html += '</tbody></table>';
-            document.getElementById('detailedTable').innerHTML = html;
-        }
-        
-        function showTab(tabName) {
-            console.log(`🔄 Cambiando a pestaña: ${tabName}`);
-            
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.getElementById(tabName).classList.add('active');
-            // Encuentra el botón de la pestaña activa basándose en su 'onclick' o 'id'
-            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
-            
-            // Forzar actualización de la vista detallada cuando se selecciona
-            if (tabName === 'detailed') {
-                console.log('🔄 Forzando actualización de vista detallada');
-                displayDetailedView();
-            }
-        }
-        
-        function filterTable(tableId, searchId) {
-            const searchTerm = document.getElementById(searchId).value.toLowerCase();
-            const table = document.querySelector(`#${tableId} table`);
-            if (!table) return;
-            
-            const rows = table.querySelectorAll('tbody tr');
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
-            });
-        }
-        
-        function exportTable(tableId, filename) {
-            const table = document.querySelector(`#${tableId} table`);
-            if (!table) return;
-            
-            let csv = '';
-            const rows = table.querySelectorAll('tr');
-            
-            rows.forEach(row => {
-                const cols = row.querySelectorAll('td, th');
-                const csvRow = Array.from(cols).map(col => `"${col.textContent.trim()}"`).join(',');
-                csv += csvRow + '\n';
-            });
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${filename}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
-        
-        function showError(message) {
-            debugLog(`❌ ERROR: ${message}`);
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('error').style.display = 'block';
-            document.getElementById('error').innerHTML = `
-                <h3>❌ Error</h3>
-                <p>${message}</p>
-                <details>
-                    <summary>💡 Consejos</summary>
-                    <ul>
-                        <li>Verifica que el archivo tenga una columna "Productos"</li>
-                        <li>Asegúrate de que el archivo no esté corrupto</li>
-                        <li>Prueba primero con "Datos de Muestra"</li>
-                    </ul>
-                </details>
-            `;
-        }
-
-        // --- Funcionalidad de datos de muestra (opcional) ---
-        function loadSampleData() {
-            debugLog('Cargando datos de muestra...');
-            const sampleCsv = `Cliente,Direccion,Productos,Estado de envío,Método de envío,Pago,Total (sin envío),Fecha
-"Cliente A","Calle Falsa 123",1x Producto X (Peso: 0.5kg, Unidades: 10),Enviado,Correo,Pagado,150.00,2025-07-20
-"Cliente B","Avenida Siempreviva 742",2x Producto Y (Peso: 1.2kg),Pendiente,Delivery,Pendiente,240.50,2025-07-21
-"Cliente C","Boulevard de los Sueños 456",1x Producto X (Peso: 0.5kg),Enviado,Retiro en Tienda,Pagado,150.00,2025-07-21
-"Cliente A","Calle Falsa 123",3x Producto Z (Peso: 0.1kg, Unidades: 5),Enviado,Correo,Pagado,75.00,2025-07-22
-"Cliente D","Pasaje Secreto 888",1x Producto Y (Peso: 1.2kg),Pendiente,Delivery,Pendiente,120.25,2025-07-23
-"Cliente B","Avenida Siempreviva 742",1x Producto X (Peso: 0.5kg),Enviado,Delivery,Pagado,150.00,2025-07-24
-"Cliente E","Ruta 9 KM 100",2x Producto A (Peso: 2kg),Pendiente,Correo,Pagado,300.00,2025-07-24`;
-            
-            processCsvData(sampleCsv);
-        }
-    </script>
-</body>
-</html>
+                const envioB = (b.Envío || b['Estado de envío'] ||
