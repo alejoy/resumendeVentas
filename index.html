@@ -334,6 +334,7 @@
             
             <div class="tabs">
                 <button class="tab active" onclick="showTab('products')">🛍️ Resumen de Productos</button>
+                <button class="tab" onclick="showTab('grouped')">📦 Pedidos Agrupados</button>
                 <button class="tab" onclick="showTab('clients')">👥 Productos por Cliente</button>
                 <button class="tab" onclick="showTab('detailed')">📋 Vista Detallada</button>
             </div>
@@ -343,6 +344,16 @@
                 <input type="text" class="search-box" id="productSearch" placeholder="🔍 Buscar por producto, variedad o sabor..." onkeyup="filterTable('productTable', 'productSearch')" />
                 <button class="export-btn" onclick="exportTable('productTable', 'resumen_productos')">📊 Exportar Resumen</button>
                 <div id="productTable"></div>
+            </div>
+            
+            <div id="grouped" class="tab-content">
+                <h3>📦 Pedidos Agrupados por Variedad y Sabor</h3>
+                <p style="color: #666; margin-bottom: 20px;">
+                    📋 Los productos se agrupan por variedad y sabor específicos, manteniendo sus unidades originales (gramos, docenas, etc.)
+                </p>
+                <input type="text" class="search-box" id="groupedSearch" placeholder="🔍 Buscar productos agrupados..." onkeyup="filterTable('groupedTable', 'groupedSearch')" />
+                <button class="export-btn" onclick="exportTable('groupedTable', 'pedidos_agrupados')">📊 Exportar Agrupados</button>
+                <div id="groupedTable"></div>
             </div>
             
             <div id="clients" class="tab-content">
@@ -373,6 +384,7 @@
         let salesData = [];
         let productSummary = {};
         let clientProducts = {};
+        let groupedProducts = {}; // NUEVO: Para productos agrupados
         let totalWeightKg = 0;
         
         function debugLog(message) {
@@ -591,6 +603,7 @@
             debugLog('🔄 Procesando datos de ventas...');
             productSummary = {};
             clientProducts = {};
+            groupedProducts = {}; // NUEVO: Reset productos agrupados
             totalWeightKg = 0;
             
             salesData.forEach((row, index) => {
@@ -610,6 +623,39 @@
                 productos.forEach(prod => {
                     const key = prod.nombre;
                     
+                    // NUEVO: Crear clave única para agrupación (producto + variedad + sabor)
+                    const groupKey = `${prod.nombre}${prod.variedad ? ` - ${prod.variedad}` : ''}${prod.sabor ? ` - ${prod.sabor}` : ''}`;
+                    
+                    // NUEVO: Procesar productos agrupados
+                    if (!groupedProducts[groupKey]) {
+                        groupedProducts[groupKey] = {
+                            nombre: prod.nombre,
+                            variedad: prod.variedad,
+                            sabor: prod.sabor,
+                            pedidos: [], // Array de pedidos individuales
+                            totalCantidad: 0,
+                            totalPeso: 0,
+                            totalUnidades: 0
+                        };
+                    }
+                    
+                    // NUEVO: Agregar pedido individual al grupo
+                    groupedProducts[groupKey].pedidos.push({
+                        cantidad: prod.cantidad,
+                        peso: prod.peso,
+                        unidades: prod.unidades,
+                        cliente: cliente
+                    });
+                    
+                    groupedProducts[groupKey].totalCantidad += prod.cantidad;
+                    if (prod.peso) {
+                        groupedProducts[groupKey].totalPeso += prod.peso * prod.cantidad;
+                    }
+                    if (prod.unidades) {
+                        groupedProducts[groupKey].totalUnidades += prod.unidades * prod.cantidad;
+                    }
+                    
+                    // Proceso original para productSummary (sin cambios)
                     if (!productSummary[key]) {
                         productSummary[key] = {
                             cantidad: 0,
@@ -617,8 +663,8 @@
                             unidades: 0,
                             tieneVariedad: false,
                             variedades: new Set(),
-                            tieneSabor: false,  // NUEVO: Agregar flag para sabor
-                            sabores: new Set(), // NUEVO: Set para sabores únicos
+                            tieneSabor: false,
+                            sabores: new Set(),
                             productos: []
                         };
                     }
@@ -640,13 +686,12 @@
                         productSummary[key].variedades.add(prod.variedad);
                     }
 
-                    // NUEVO: Manejar sabores
                     if (prod.sabor) {
                         productSummary[key].tieneSabor = true;
                         productSummary[key].sabores.add(prod.sabor);
                     }
                     
-                    // Para clientes
+                    // Para clientes (sin cambios)
                     if (!clientProducts[cliente][key]) {
                         clientProducts[cliente][key] = {
                             cantidad: 0,
@@ -667,7 +712,7 @@
                 });
             });
             
-            debugLog(`✅ Procesados: ${Object.keys(productSummary).length} productos únicos, ${Object.keys(clientProducts).length} clientes, ${totalWeightKg.toFixed(2)}kg total`);
+            debugLog(`✅ Procesados: ${Object.keys(productSummary).length} productos únicos, ${Object.keys(clientProducts).length} clientes, ${Object.keys(groupedProducts).length} grupos específicos, ${totalWeightKg.toFixed(2)}kg total`);
         }
         
         function displayResults() {
@@ -683,6 +728,7 @@
             document.getElementById('totalSales').textContent = totalSales;
             
             displayProductSummary();
+            displayGroupedProducts(); // NUEVO: Mostrar productos agrupados
             displayClientProducts();
             displayDetailedView();
             
@@ -727,6 +773,96 @@
             document.getElementById('productTable').innerHTML = html;
         }
         
+        // NUEVA FUNCIÓN: Mostrar productos agrupados por variedad y sabor
+        function displayGroupedProducts() {
+            const sortedGroups = Object.entries(groupedProducts)
+                .sort((a, b) => {
+                    // Ordenar por nombre de producto primero, luego por variedad/sabor
+                    if (a[1].nombre !== b[1].nombre) {
+                        return a[1].nombre.localeCompare(b[1].nombre);
+                    }
+                    return a[0].localeCompare(b[0]);
+                });
+            
+            let html = '<table id="groupedTableData"><thead><tr><th>Producto</th><th>Variedad</th><th>Sabor</th><th>Pedidos Individuales</th><th>Total</th></tr></thead><tbody>';
+            
+            sortedGroups.forEach(([groupKey, info]) => {
+                const variedadDisplay = info.variedad ? `<span class="variety-badge">🌱 ${info.variedad}</span>` : '-';
+                const saborDisplay = info.sabor ? `<span class="flavor-badge">👅 ${info.sabor}</span>` : '-';
+                
+                // Crear lista de pedidos individuales
+                const pedidosAgrupados = {};
+                
+                info.pedidos.forEach(pedido => {
+                    let pedidoKey = '';
+                    
+                    if (pedido.peso) {
+                        // Para productos por peso (gramos/kg)
+                        const pesoGramos = Math.round(pedido.peso * pedido.cantidad * 1000);
+                        pedidoKey = `${pedido.cantidad} x ${pesoGramos}g`;
+                    } else if (pedido.unidades) {
+                        // Para productos por unidades (docenas, medias docenas)
+                        const totalUnidades = pedido.unidades * pedido.cantidad;
+                        if (totalUnidades === 12) {
+                            pedidoKey = `${pedido.cantidad} x 1 docena`;
+                        } else if (totalUnidades === 6) {
+                            pedidoKey = `${pedido.cantidad} x 1/2 docena`;
+                        } else if (totalUnidades === 24) {
+                            pedidoKey = `${pedido.cantidad} x 2 docenas`;
+                        } else {
+                            pedidoKey = `${pedido.cantidad} x ${pedido.unidades}u c/u`;
+                        }
+                    } else {
+                        // Para productos por cantidad simple
+                        pedidoKey = `${pedido.cantidad}x`;
+                    }
+                    
+                    if (!pedidosAgrupados[pedidoKey]) {
+                        pedidosAgrupados[pedidoKey] = 0;
+                    }
+                    pedidosAgrupados[pedidoKey]++;
+                });
+                
+                // Convertir pedidos agrupados a texto
+                const pedidosDisplay = Object.entries(pedidosAgrupados)
+                    .map(([pedido, veces]) => {
+                        if (veces === 1) {
+                            return `<div style="margin: 2px 0; padding: 3px 8px; background: rgba(102, 126, 234, 0.1); border-radius: 10px; display: inline-block; margin-right: 5px;">${pedido}</div>`;
+                        } else {
+                            return `<div style="margin: 2px 0; padding: 3px 8px; background: rgba(102, 126, 234, 0.2); border-radius: 10px; display: inline-block; margin-right: 5px; font-weight: bold;">${veces} × (${pedido})</div>`;
+                        }
+                    })
+                    .join(' ');
+                
+                // Calcular total
+                let totalDisplay = '';
+                if (info.totalPeso > 0) {
+                    const totalGramos = Math.round(info.totalPeso * 1000);
+                    totalDisplay = `<span class="weight-badge">${totalGramos}g total</span>`;
+                } else if (info.totalUnidades > 0) {
+                    const docenas = Math.floor(info.totalUnidades / 12);
+                    const sueltas = info.totalUnidades % 12;
+                    let displayParts = [];
+                    if (docenas > 0) displayParts.push(`${docenas} docena${docenas > 1 ? 's' : ''}`);
+                    if (sueltas > 0) displayParts.push(`${sueltas} sueltas`);
+                    totalDisplay = `<span class="unit-badge">${displayParts.join(' + ')}</span>`;
+                } else {
+                    totalDisplay = `<span class="quantity-badge">${info.totalCantidad} total</span>`;
+                }
+                
+                html += `<tr>
+                    <td><strong>${info.nombre}</strong></td>
+                    <td>${variedadDisplay}</td>
+                    <td>${saborDisplay}</td>
+                    <td>${pedidosDisplay}</td>
+                    <td>${totalDisplay}</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('groupedTable').innerHTML = html;
+        }
+        
         function displayClientProducts() {
             let html = '<table id="clientTableData"><thead><tr><th>Cliente</th>';
             
@@ -768,4 +904,159 @@
             // Ordenar salesData por el tipo de envío
             const sortedSalesData = [...salesData].sort((a, b) => {
                 const envioA = (a.Envío || a['Estado de envío'] || '').toString().trim().toLowerCase();
-                const envioB = (b.Envío || b['Estado de envío'] ||
+                const envioB = (b.Envío || b['Estado de envío'] || '').toString().trim().toLowerCase();
+                return envioA.localeCompare(envioB);
+            });
+
+            let html = '<table id="detailedTableData"><thead><tr><th>Cliente</th><th>Dirección</th><th>Tipo de Envío</th><th>Estado Pago</th><th>Total</th><th>Productos</th></tr></thead><tbody>';
+            
+            sortedSalesData.forEach(row => {
+                const productos = row.Productos || '';
+                const parsedProducts = parseProductInfo(productos);
+                let direccionParts = [];
+                const calle = (row['Envío - Calle'] || '').toString().trim();
+                const numero = (row['Envío - Número'] || '').toString().trim();
+                const piso = (row['Envío - Piso'] || '').toString().trim();
+                const dpto = (row['Envío - Dpto'] || '').toString().trim();
+
+                if (calle) {
+                    let streetAddress = calle;
+                    if (numero) {
+                        streetAddress += ' ' + numero;
+                    }
+                    direccionParts.push(streetAddress);
+                }
+
+                if (piso) {
+                    direccionParts.push('Piso ' + piso);
+                }
+                if (dpto) {
+                    direccionParts.push('Dpto ' + dpto);
+                }
+
+                // If no specific address parts are found, fallback to existing 'Direccion' or '-'
+                const direccionCliente = direccionParts.length > 0 ? direccionParts.join(', ') : (row.Direccion || row.direccion || '-');
+                
+                let productosDisplay = parsedProducts.map(p => {
+                    let display = `${p.cantidad}x ${p.nombre}`;
+                    if (p.peso) display += ` (${p.peso}kg)`;
+                    if (p.unidades) display += ` [${p.unidades}u]`;
+                    if (p.variedad) display += ` - Variedad: ${p.variedad}`;
+                    if (p.sabor) display += ` - Sabor: ${p.sabor}`;  // NUEVO: Mostrar sabor
+                    return display;
+                }).join('<br>');
+
+                // Determinar el tipo de envío (columna "Envío" o "Método de envío")
+                let tipoEnvio = row['Método de envío'] || row.Envío || row['Estado de envío'] || '-';
+                
+                html += `<tr>
+                    <td><strong>${row.Cliente || '-'}</strong></td>
+                    <td>${direccionCliente}</td>
+                    <td>${tipoEnvio}</td>
+                    <td>${row.Pago || '-'}</td>
+                    <td>${row['Total (sin envío)'] || '0'}</td>
+                    <td>${productosDisplay}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('detailedTable').innerHTML = html;
+        }
+        
+        function showTab(tabName) {
+            console.log(`🔄 Cambiando a pestaña: ${tabName}`);
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            // Encuentra el botón de la pestaña activa basándose en su 'onclick' o 'id'
+            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
+            
+            // Forzar actualización de la vista detallada cuando se selecciona
+            if (tabName === 'detailed') {
+                console.log('🔄 Forzando actualización de vista detallada');
+                displayDetailedView();
+            }
+            // NUEVO: Forzar actualización de productos agrupados
+            if (tabName === 'grouped') {
+                console.log('🔄 Forzando actualización de productos agrupados');
+                displayGroupedProducts();
+            }
+        }
+        
+        function filterTable(tableId, searchId) {
+            const searchTerm = document.getElementById(searchId).value.toLowerCase();
+            const table = document.querySelector(`#${tableId} table`);
+            if (!table) return;
+            
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+        
+        function exportTable(tableId, filename) {
+            const table = document.querySelector(`#${tableId} table`);
+            if (!table) return;
+            
+            let csv = '';
+            const rows = table.querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('td, th');
+                const csvRow = Array.from(cols).map(col => `"${col.textContent.trim()}"`).join(',');
+                csv += csvRow + '\n';
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        function showError(message) {
+            debugLog(`❌ ERROR: ${message}`);
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerHTML = `
+                <h3>❌ Error</h3>
+                <p>${message}</p>
+                <details>
+                    <summary>💡 Consejos</summary>
+                    <ul>
+                        <li>Verifica que el archivo tenga una columna "Productos"</li>
+                        <li>Asegúrate de que el archivo no esté corrupto</li>
+                        <li>Prueba primero con "Datos de Muestra"</li>
+                    </ul>
+                </details>
+            `;
+        }
+
+        // --- Funcionalidad de datos de muestra (opcional) ---
+        function loadSampleData() {
+            debugLog('Cargando datos de muestra...');
+            const sampleCsv = `Cliente,Direccion,Productos,Estado de envío,Método de envío,Pago,Total (sin envío),Fecha
+"Cliente A","Calle Falsa 123","3x Granola (Peso: 0.1kg, Sabor: Coco)",Enviado,Correo,Pagado,150.00,2025-07-20
+"Cliente B","Avenida Siempreviva 742","2x Granola (Peso: 0.1kg, Sabor: Coco)",Pendiente,Delivery,Pendiente,240.50,2025-07-21
+"Cliente C","Boulevard de los Sueños 456","1x Granola (Peso: 0.2kg, Sabor: Almendras)",Enviado,Retiro en Tienda,Pagado,150.00,2025-07-21
+"Cliente A","Calle Falsa 123","2x Milanesas (Unidades: 12, Variedad: Pollo)",Enviado,Correo,Pagado,75.00,2025-07-22
+"Cliente D","Pasaje Secreto 888","1x Milanesas (Unidades: 6, Variedad: Pollo)",Pendiente,Delivery,Pendiente,120.25,2025-07-23
+"Cliente B","Avenida Siempreviva 742","1x Hamburguesas (Unidades: 12, Variedad: Carne)",Enviado,Delivery,Pagado,150.00,2025-07-24
+"Cliente E","Ruta 9 KM 100","1x Granola (Peso: 0.15kg, Sabor: Coco)",Pendiente,Correo,Pagado,300.00,2025-07-24
+"Cliente F","Calle Nueva 999","3x Milanesas (Unidades: 12, Variedad: Pollo)",Enviado,Correo,Pagado,180.00,2025-07-25`;
+            
+            processCsvData(sampleCsv);
+        }
+    </script>
+</body>
+</html>
