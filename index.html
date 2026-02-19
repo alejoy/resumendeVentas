@@ -3,1059 +3,510 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analizador de Ventas y Productos</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <title>Ohana Ventas - Resumen</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
+            font-family: 'Segoe UI', system-ui, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            padding: 20px;
         }
-        
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            backdrop-filter: blur(10px);
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
-        
         h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 30px;
+            color: #333;
+            margin-bottom: 10px;
             font-size: 2.5em;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
-        
-        .upload-area {
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .upload-zone {
             border: 3px dashed #667eea;
             border-radius: 15px;
-            padding: 40px;
+            padding: 60px;
             text-align: center;
-            margin-bottom: 20px;
-            background: rgba(102, 126, 234, 0.1);
-            transition: all 0.3s ease;
+            background: #f8f9ff;
+            transition: all 0.3s;
+            cursor: pointer;
         }
-        
-        .upload-area:hover {
-            background: rgba(102, 126, 234, 0.2);
+        .upload-zone:hover, .upload-zone.dragover {
+            background: #eef0ff;
+            border-color: #764ba2;
             transform: translateY(-2px);
         }
-        
-        input[type="file"] {
-            margin: 20px 0;
-            padding: 15px;
-            border: 2px solid #667eea;
-            border-radius: 10px;
-            background: white;
-            font-size: 16px;
-            width: 100%;
-            max-width: 400px;
-        }
-        
-        .upload-btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            margin: 10px;
-        }
-        
-        .upload-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            background: rgba(102, 126, 234, 0.1);
-            border-radius: 15px;
-            padding: 5px;
-        }
-        
-        .tab {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            background: transparent;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            color: #2c3e50;
-        }
-        
-        .tab.active {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
+        .upload-zone input { display: none; }
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
-            margin-bottom: 30px;
+            margin: 30px 0;
         }
-        
         .stat-card {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             padding: 25px;
             border-radius: 15px;
-            text-align: center;
-            border: 1px solid rgba(102, 126, 234, 0.2);
-            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.2);
-        }
-        
-        .stat-number {
+        .stat-value {
             font-size: 2.5em;
             font-weight: bold;
-            color: #667eea;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
-        
         .stat-label {
-            color: #2c3e50;
-            font-size: 1.1em;
-            font-weight: 500;
+            opacity: 0.9;
+            font-size: 0.9em;
         }
-        
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 30px;
             background: white;
-            border-radius: 15px;
+            border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
-        
-        th, td {
+        th {
+            background: #667eea;
+            color: white;
             padding: 15px;
             text-align: left;
-            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
-        }
-        
-        th {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
-        
-        tr:nth-child(even) {
-            background: rgba(102, 126, 234, 0.05);
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
         }
-        
         tr:hover {
-            background: rgba(102, 126, 234, 0.1);
-            transform: translateX(5px);
-            transition: all 0.2s ease;
+            background: #f8f9ff;
         }
-        
-        .export-btn {
-            background: linear-gradient(45deg, #27ae60, #2ecc71);
+        .product-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .product-meta {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 4px;
+        }
+        .quantity-badge {
+            background: #667eea;
             color: white;
-            padding: 12px 25px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .error-row {
+            background: #fff3cd !important;
+        }
+        .hidden { display: none; }
+        .btn {
+            background: #667eea;
+            color: white;
             border: none;
+            padding: 12px 30px;
             border-radius: 25px;
             cursor: pointer;
-            font-size: 14px;
-            margin: 10px 5px;
-            transition: all 0.3s ease;
+            font-size: 1em;
+            margin-top: 20px;
+            transition: all 0.3s;
         }
-        
-        .export-btn:hover {
+        .btn:hover {
+            background: #764ba2;
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(39, 174, 96, 0.3);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
         }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #667eea;
-            font-size: 1.2em;
-        }
-        
-        .error {
-            background: rgba(231, 76, 60, 0.1);
-            color: #e74c3c;
-            padding: 20px;
-            border-radius: 15px;
+        .filters {
             margin: 20px 0;
-            border: 1px solid rgba(231, 76, 60, 0.2);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
-        
-        .search-box {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid rgba(102, 126, 234, 0.3);
-            border-radius: 25px;
-            font-size: 16px;
-            margin-bottom: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            transition: all 0.3s ease;
-        }
-        
-        .search-box:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
-        }
-        
-        .quantity-badge {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            padding: 5px 12px;
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
             border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
         }
-        
-        .weight-badge {
-            background: linear-gradient(45deg, #f39c12, #e67e22);
+        .filter-btn.active, .filter-btn:hover {
+            background: #667eea;
             color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-        
-        .unit-badge {
-            background: linear-gradient(45deg, #27ae60, #2ecc71);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-        
-        .debug-info {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 10px;
-            margin: 10px 0;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        
-        .product-detail {
-            font-size: 0.9em;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .flavor-badge {
-            background: linear-gradient(45deg, #e74c3c, #c0392b);
-            color: white;
-            padding: 3px 8px;
-            border-radius: 15px;
-            font-size: 0.8em;
-            font-weight: bold;
-            margin: 2px;
-            display: inline-block;
-        }
-
-        .variety-badge {
-            background: linear-gradient(45deg, #9b59b6, #8e44ad);
-            color: white;
-            padding: 3px 8px;
-            border-radius: 15px;
-            font-size: 0.8em;
-            font-weight: bold;
-            margin: 2px;
-            display: inline-block;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📊 Analizador de Ventas y Productos</h1>
+        <h1>🌿 Ohana Ventas</h1>
+        <p class="subtitle">Sistema de resumen de ventas - Análisis inteligente de productos</p>
         
-        <div class="upload-area">
-            <h3>📁 Sube tu archivo Excel (.xlsx) o CSV</h3>
-            <p>Selecciona tu archivo aquí:</p>
-            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)" />
-            <br>
-            <button class="upload-btn" onclick="loadSampleData()">🎯 Probar con Datos de Muestra</button>
-            <div id="debugInfo" class="debug-info" style="display: none;"></div>
+        <div class="upload-zone" id="dropZone">
+            <input type="file" id="fileInput" accept=".xlsx,.xls" />
+            <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
+            <h3>Arrastra tu archivo Excel aquí</h3>
+            <p style="color: #666; margin-top: 10px;">o haz clic para seleccionar</p>
         </div>
-        
-        <div id="results" style="display: none;">
+
+        <div id="results" class="hidden">
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-number" id="totalClients">0</div>
-                    <div class="stat-label">Clientes</div>
+                    <div class="stat-value" id="totalSales">0</div>
+                    <div class="stat-label">Total Ventas</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="totalProducts">0</div>
-                    <div class="stat-label">Productos Únicos</div>
+                    <div class="stat-value" id="totalProducts">0</div>
+                    <div class="stat-label">Productos Vendidos</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="totalWeight">0</div>
-                    <div class="stat-label">Total Kg</div>
+                    <div class="stat-value" id="uniqueProducts">0</div>
+                    <div class="stat-label">Productos Distintos</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="totalSales">0</div>
-                    <div class="stat-label">Ventas Procesadas</div>
+                    <div class="stat-value" id="pendingOrders">0</div>
+                    <div class="stat-label">Órdenes Pendientes</div>
                 </div>
             </div>
-            
-            <div class="tabs">
-                <button class="tab active" onclick="showTab('products')">🛍️ Resumen de Productos</button>
-                <button class="tab" onclick="showTab('grouped')">📦 Pedidos Agrupados</button>
-                <button class="tab" onclick="showTab('clients')">👥 Productos por Cliente</button>
-                <button class="tab" onclick="showTab('detailed')">📋 Vista Detallada</button>
+
+            <div class="filters">
+                <button class="filter-btn active" onclick="filterStatus('all')">Todas</button>
+                <button class="filter-btn" onclick="filterStatus('Finalizado')">Finalizadas</button>
+                <button class="filter-btn" onclick="filterStatus('Pendiente')">Pendientes</button>
             </div>
-            
-            <div id="products" class="tab-content active">
-                <h3>🏆 Resumen Total de Productos</h3>
-                <input type="text" class="search-box" id="productSearch" placeholder="🔍 Buscar por producto, variedad o sabor..." onkeyup="filterTable('productTable', 'productSearch')" />
-                <button class="export-btn" onclick="exportTable('productTable', 'resumen_productos')">📊 Exportar Resumen</button>
-                <div id="productTable"></div>
-            </div>
-            
-            <div id="grouped" class="tab-content">
-                <h3>📦 Pedidos Agrupados por Variedad y Sabor</h3>
-                <p style="color: #666; margin-bottom: 20px;">
-                    📋 Los productos se agrupan por variedad y sabor específicos, manteniendo sus unidades originales (gramos, docenas, etc.)
-                </p>
-                <input type="text" class="search-box" id="groupedSearch" placeholder="🔍 Buscar productos agrupados..." onkeyup="filterTable('groupedTable', 'groupedSearch')" />
-                <button class="export-btn" onclick="exportTable('groupedTable', 'pedidos_agrupados')">📊 Exportar Agrupados</button>
-                <div id="groupedTable"></div>
-            </div>
-            
-            <div id="clients" class="tab-content">
-                <h3>👥 Productos por Cliente</h3>
-                <input type="text" class="search-box" id="clientSearch" placeholder="🔍 Buscar clientes..." onkeyup="filterTable('clientTable', 'clientSearch')" />
-                <button class="export-btn" onclick="exportTable('clientTable', 'productos_por_cliente')">📊 Exportar por Cliente</button>
-                <div id="clientTable"></div>
-            </div>
-            
-            <div id="detailed" class="tab-content">
-                <h3>📋 Vista Detallada de Ventas</h3>
-                <input type="text" class="search-box" id="detailedSearch" placeholder="🔍 Buscar en ventas..." onkeyup="filterTable('detailedTable', 'detailedSearch')" />
-                <button class="export-btn" onclick="exportTable('detailedTable', 'ventas_detalladas')">📊 Exportar Detallado</button>
-                <div id="detailedTable"></div>
-            </div>
+
+            <table id="salesTable">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Variedad/Detalle</th>
+                        <th>Cantidad Total</th>
+                        <th>Unidades</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+
+            <button class="btn" onclick="downloadCSV()">📥 Descargar CSV</button>
+            <button class="btn" onclick="location.reload()" style="margin-left: 10px; background: #666;">🔄 Nuevo Archivo</button>
         </div>
-        
-        <div id="loading" class="loading" style="display: none;">
-            ⏳ Procesando archivo...
-        </div>
-        
-        <div id="error" class="error" style="display: none;"></div>
     </div>
 
     <script>
-        console.log('Script iniciado');
-        
         let salesData = [];
-        let productSummary = {};
-        let clientProducts = {};
-        let groupedProducts = {}; // NUEVO: Para productos agrupados
-        let totalWeightKg = 0;
-        
-        function debugLog(message) {
-            console.log(message);
-            const debugDiv = document.getElementById('debugInfo');
-            debugDiv.style.display = 'block';
-            debugDiv.innerHTML += message + '<br>';
-        }
-        
-        function handleFileSelect(event) {
-            debugLog('📁 Archivo seleccionado');
-            const file = event.target.files[0];
-            if (file) {
-                debugLog(`📄 Archivo: ${file.name} (${file.size} bytes)`);
-                handleFile(file);
-            } else {
-                debugLog('❌ No se seleccionó archivo');
-            }
-        }
-        
+        let currentFilter = 'all';
+
+        // Drag and drop handlers
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
         function handleFile(file) {
-            debugLog(`🔄 Procesando: ${file.name}`);
-            
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('error').style.display = 'none';
-            document.getElementById('results').style.display = 'none';
+            if (!file) return;
             
             const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                debugLog('✅ Archivo leído correctamente');
+            reader.onload = (e) => {
                 try {
-                    if (file.name.toLowerCase().endsWith('.csv')) {
-                        debugLog('📊 Procesando como CSV');
-                        processCsvData(e.target.result);
-                    } else if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
-                        debugLog('📈 Procesando como Excel');
-                        processExcelData(e.target.result);
-                    } else {
-                        showError('Formato no soportado. Usa .xlsx, .xls o .csv');
-                    }
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    processData(jsonData);
                 } catch (error) {
-                    debugLog(`❌ Error: ${error.message}`);
-                    showError('Error al procesar: ' + error.message);
+                    alert('Error al procesar el archivo: ' + error.message);
                 }
             };
-            
-            reader.onerror = function() {
-                debugLog('❌ Error al leer archivo');
-                showError('Error al leer el archivo');
-            };
-            
-            if (file.name.toLowerCase().endsWith('.csv')) {
-                reader.readAsText(file, 'UTF-8');
-            } else {
-                reader.readAsArrayBuffer(file);
-            }
+            reader.readAsArrayBuffer(file);
         }
-        
-        function processExcelData(arrayBuffer) {
-            try {
-                debugLog('🔧 Iniciando procesamiento Excel');
-                
-                if (typeof XLSX === 'undefined') {
-                    throw new Error('Librería XLSX no cargada');
-                }
-                
-                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                debugLog(`📚 Hojas encontradas: ${workbook.SheetNames.join(', ')}`);
-                
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
-                    header: 1,
-                    defval: '',
-                    blankrows: false,
-                    raw: false
-                });
-                
-                debugLog(`📝 ${jsonData.length} filas extraídas`);
-                
-                if (jsonData.length < 2) {
-                    throw new Error('El archivo debe tener al menos headers y una fila de datos');
-                }
-                
-                const headers = jsonData[0];
-                const rows = jsonData.slice(1);
-                
-                debugLog(`🏷️ Headers: ${headers.join(', ')}`);
-                
-                const productosIndex = headers.findIndex(h => 
-                    h && h.toString().toLowerCase().includes('producto')
-                );
-                
-                if (productosIndex === -1) {
-                    throw new Error('No se encontró columna "Productos"');
-                }
-                
-                const processedData = rows.map(row => {
-                    const obj = {};
-                    headers.forEach((header, index) => {
-                        obj[header] = row[index] || '';
-                    });
-                    return obj;
-                }).filter(row => {
-                    return Object.values(row).some(val => val && val.toString().trim());
-                });
-                
-                debugLog(`✅ ${processedData.length} registros procesados`);
-                
-                salesData = processedData;
-                processData();
-                displayResults();
-                
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('results').style.display = 'block';
-                
-            } catch (error) {
-                debugLog(`❌ Error Excel: ${error.message}`);
-                showError('Error procesando Excel: ' + error.message);
-            }
-        }
-        
-        function processCsvData(csvText) {
-            Papa.parse(csvText, {
-                header: true,
-                skipEmptyLines: true,
-                dynamicTyping: false,
-                complete: function(results) {
-                    try {
-                        debugLog(`📊 CSV parseado: ${results.data.length} registros`);
-                        salesData = results.data;
-                        processData();
-                        displayResults();
-                        document.getElementById('loading').style.display = 'none';
-                        document.getElementById('results').style.display = 'block';
-                    } catch (error) {
-                        debugLog(`❌ Error procesando CSV: ${error.message}`);
-                        showError('Error procesando CSV: ' + error.message);
-                    }
-                },
-                error: function(error) {
-                    debugLog(`❌ Error parseando CSV: ${error.message}`);
-                    showError('Error parseando CSV: ' + error.message);
-                }
-            });
-        }
-        
-        function parseProductInfo(productStr) {
-            // Función mejorada para extraer información de productos
-            const products = [];
-            
-            // Regex más específico para capturar peso y unidades
-            const productoRegex = /(\d+)x\s*([^()]+?)(?:\s*\(([^)]*)\))?\s*(?:\(SKU:[^)]*\))?(?:,|$)/g;
-            let match;
-            
-            while ((match = productoRegex.exec(productStr)) !== null) {
-                const cantidad = parseInt(match[1]) || 1;
-                let producto = match[2].trim().replace(/\s+/g, ' ');
-                const detalles = match[3] || '';
-                
-                if (producto) {
-                    // Extraer peso si está en los detalles
-                    let peso = null;
-                    let unidades = null;
-                    let variedad = '';
-                    let sabor = '';  // NUEVO: Agregar sabor
-                    
-                    if (detalles) {
-                        // Buscar peso (kg, grs, gramos)
-                        const pesoMatch = detalles.match(/(?:Peso:\s*)?(\d+(?:\.\d+)?)\s*(kg|grs?|gramos?)/i);
-                        if (pesoMatch) {
-                            peso = parseFloat(pesoMatch[1]);
-                            const unidad = pesoMatch[2].toLowerCase();
-                            if (unidad.includes('gr')) {
-                                peso = peso / 1000; // convertir a kg
-                            }
-                        }
-                        
-                        // Buscar unidades
-                        const unidadesMatch = detalles.match(/Unidades:\s*(\d+)/i);
-                        if (unidadesMatch) {
-                            unidades = parseInt(unidadesMatch[1]);
-                        }
-                        
-                        // Buscar variedad
-                        const variedadMatch = detalles.match(/Variedad:\s*([^,]+)/i);
-                        if (variedadMatch) {
-                            variedad = variedadMatch[1].trim();
-                        }
 
-                        // NUEVO: Buscar sabor
-                        const saborMatch = detalles.match(/Sabor:\s*([^,]+)/i);
-                        if (saborMatch) {
-                            sabor = saborMatch[1].trim();
-                        }
-                    }
-                    
+        // 🔧 PARSER MEJORADO - Maneja paréntesis anidados
+        function parseProductString(productStr) {
+            const products = [];
+            // Separar por comas pero respetar paréntesis
+            const items = splitRespectingParentheses(productStr);
+            
+            items.forEach(item => {
+                item = item.trim();
+                if (!item) return;
+
+                // Patrón: Cantidad x Nombre (Variedad) (Peso: ...) (SKU: ...)
+                // Maneja paréntesis anidados en el nombre
+                const match = item.match(/^(\d+)x\s+(.+)$/);
+                if (!match) {
                     products.push({
-                        nombre: producto,
-                        cantidad: cantidad,
-                        peso: peso,
-                        unidades: unidades,
-                        variedad: variedad,
-                        sabor: sabor,  // NUEVO: Incluir sabor en el objeto
-                        detalles: detalles
+                        raw: item,
+                        quantity: 1,
+                        name: item,
+                        variety: '',
+                        weight: '',
+                        sku: '',
+                        error: true
                     });
+                    return;
                 }
-            }
+
+                const quantity = parseInt(match[1]);
+                const details = match[2].trim();
+                
+                // Extraer componentes considerando paréntesis anidados
+                const parsed = extractComponents(details);
+                
+                products.push({
+                    raw: item,
+                    quantity: quantity,
+                    name: parsed.name,
+                    variety: parsed.variety,
+                    weight: parsed.weight,
+                    sku: parsed.sku,
+                    error: false
+                });
+            });
             
             return products;
         }
-        
-        function processData() {
-            debugLog('🔄 Procesando datos de ventas...');
-            productSummary = {};
-            clientProducts = {};
-            groupedProducts = {}; // NUEVO: Reset productos agrupados
-            totalWeightKg = 0;
+        // Separar por comas respetando paréntesis anidados
+        function splitRespectingParentheses(str) {
+            const result = [];
+            let current = '';
+            let depth = 0;
             
-            salesData.forEach((row, index) => {
-                const cliente = (row.Cliente || row.cliente || '').toString().trim();
-                const productosStr = (row.Productos || row.productos || '').toString();
-                
-                if (!cliente || !productosStr) {
-                    return;
+            for (let char of str) {
+                if (char === '(') depth++;
+                else if (char === ')') depth--;
+                else if (char === ',' && depth === 0) {
+                    result.push(current);
+                    current = '';
+                    continue;
                 }
-                
-                if (!clientProducts[cliente]) {
-                    clientProducts[cliente] = {};
+                current += char;
+            }
+            if (current.trim()) result.push(current);
+            return result;
+        }
+
+        // Extraer componentes del producto
+        function extractComponents(details) {
+            const result = {
+                name: details,
+                variety: '',
+                weight: '',
+                sku: ''
+            };
+
+            // Extraer SKU
+            const skuMatch = details.match(/\(SKU:\s*([^)]+)\)/);
+            if (skuMatch) {
+                result.sku = skuMatch[1].trim();
+                details = details.replace(skuMatch[0], '').trim();
+            }
+
+            // Extraer Peso
+            const weightMatch = details.match(/\(Peso:\s*([^)]+)\)/);
+            if (weightMatch) {
+                result.weight = weightMatch[1].trim();
+                details = details.replace(weightMatch[0], '').trim();
+            }
+
+            // Extraer Variedad (lo que queda entre paréntesis al final)
+            const varietyMatch = details.match(/\(Variedad:\s*([^)]+)\)/);
+            if (varietyMatch) {
+                result.variety = varietyMatch[1].trim();
+                details = details.replace(varietyMatch[0], '').trim();
+            }
+
+            // El nombre base es lo que queda
+            // Limpiar paréntesis residuales como (sin azucar)
+            const nameMatch = details.match(/^([^(]+)/);
+            if (nameMatch) {
+                result.name = nameMatch[1].trim();
+                // Buscar descriptores entre paréntesis que no sean metadata
+                const extraMatch = details.match(/\(([^)]+)\)/g);
+                if (extraMatch && !result.variety) {
+                    result.variety = extraMatch.map(m => m.slice(1, -1)).join(', ');
                 }
-                
-                const productos = parseProductInfo(productosStr);
-                
-                productos.forEach(prod => {
-                    const key = prod.nombre;
-                    
-                    // NUEVO: Crear clave única para agrupación (producto + variedad + sabor)
-                    const groupKey = `${prod.nombre}${prod.variedad ? ` - ${prod.variedad}` : ''}${prod.sabor ? ` - ${prod.sabor}` : ''}`;
-                    
-                    // NUEVO: Procesar productos agrupados
-                    if (!groupedProducts[groupKey]) {
-                        groupedProducts[groupKey] = {
-                            nombre: prod.nombre,
-                            variedad: prod.variedad,
-                            sabor: prod.sabor,
-                            pedidos: [], // Array de pedidos individuales
-                            totalCantidad: 0,
-                            totalPeso: 0,
-                            totalUnidades: 0
-                        };
-                    }
-                    
-                    // NUEVO: Agregar pedido individual al grupo
-                    groupedProducts[groupKey].pedidos.push({
-                        cantidad: prod.cantidad,
-                        peso: prod.peso,
-                        unidades: prod.unidades,
-                        cliente: cliente
+            }
+
+            return result;
+        }
+
+        function processData(data) {
+            salesData = [];
+            const headers = data[0];
+            
+            // Encontrar índices de columnas importantes
+            const productCol = headers.findIndex(h => h && h.toString().includes('Productos'));
+            const statusCol = headers.findIndex(h => h && h.toString().includes('Pago'));
+            const dateCol = headers.findIndex(h => h && h.toString().includes('Fecha'));
+            
+            for (let i = 2; i < data.length; i++) {
+                const row = data[i];
+                if (!row[productCol]) continue;
+
+                const products = parseProductString(row[productCol].toString());
+                const status = row[statusCol] || 'Desconocido';
+                const date = row[dateCol] || '';
+
+                products.forEach(prod => {
+                    salesData.push({
+                        ...prod,
+                        orderStatus: status,
+                        date: date,
+                        rowIndex: i
                     });
-                    
-                    groupedProducts[groupKey].totalCantidad += prod.cantidad;
-                    if (prod.peso) {
-                        groupedProducts[groupKey].totalPeso += prod.peso * prod.cantidad;
-                    }
-                    if (prod.unidades) {
-                        groupedProducts[groupKey].totalUnidades += prod.unidades * prod.cantidad;
-                    }
-                    
-                    // Proceso original para productSummary (sin cambios)
-                    if (!productSummary[key]) {
-                        productSummary[key] = {
-                            cantidad: 0,
-                            peso: 0,
-                            unidades: 0,
-                            tieneVariedad: false,
-                            variedades: new Set(),
-                            tieneSabor: false,
-                            sabores: new Set(),
-                            productos: []
-                        };
-                    }
-                    
-                    productSummary[key].cantidad += prod.cantidad;
-                    productSummary[key].productos.push(prod);
-                    
-                    if (prod.peso) {
-                        productSummary[key].peso += prod.peso * prod.cantidad;
-                        totalWeightKg += prod.peso * prod.cantidad;
-                    }
-                    
-                    if (prod.unidades) {
-                        productSummary[key].unidades += prod.unidades * prod.cantidad;
-                    }
-                    
-                    if (prod.variedad) {
-                        productSummary[key].tieneVariedad = true;
-                        productSummary[key].variedades.add(prod.variedad);
-                    }
-
-                    if (prod.sabor) {
-                        productSummary[key].tieneSabor = true;
-                        productSummary[key].sabores.add(prod.sabor);
-                    }
-                    
-                    // Para clientes (sin cambios)
-                    if (!clientProducts[cliente][key]) {
-                        clientProducts[cliente][key] = {
-                            cantidad: 0,
-                            peso: 0,
-                            unidades: 0,
-                            productos: []
-                        };
-                    }
-                    
-                    clientProducts[cliente][key].cantidad += prod.cantidad;
-                    if (prod.peso) {
-                        clientProducts[cliente][key].peso += prod.peso * prod.cantidad;
-                    }
-                    if (prod.unidades) {
-                        clientProducts[cliente][key].unidades += prod.unidades * prod.cantidad;
-                    }
-                    clientProducts[cliente][key].productos.push(prod);
                 });
-            });
-            
-            debugLog(`✅ Procesados: ${Object.keys(productSummary).length} productos únicos, ${Object.keys(clientProducts).length} clientes, ${Object.keys(groupedProducts).length} grupos específicos, ${totalWeightKg.toFixed(2)}kg total`);
+            }
+
+            displayResults();
         }
-        
+
         function displayResults() {
-            debugLog('📊 Mostrando resultados...');
-            
-            const totalClients = Object.keys(clientProducts).length;
-            const totalProducts = Object.keys(productSummary).length;
+            document.getElementById('dropZone').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+
+            // Calcular estadísticas
             const totalSales = salesData.length;
+            const totalProducts = salesData.reduce((sum, p) => sum + p.quantity, 0);
+            const pendingOrders = salesData.filter(p => p.orderStatus === 'Pendiente').length;
             
-            document.getElementById('totalClients').textContent = totalClients;
-            document.getElementById('totalProducts').textContent = totalProducts;
-            document.getElementById('totalWeight').textContent = totalWeightKg.toFixed(1);
+            // Agrupar por producto para contar únicos
+            const productMap = new Map();
+            salesData.forEach(p => {
+                const key = `${p.name}|${p.variety}|${p.weight}`;
+                if (!productMap.has(key)) {
+                    productMap.set(key, { ...p, totalQty: 0 });
+                }
+                productMap.get(key).totalQty += p.quantity;
+            });
+
             document.getElementById('totalSales').textContent = totalSales;
-            
-            displayProductSummary();
-            displayGroupedProducts(); // NUEVO: Mostrar productos agrupados
-            displayClientProducts();
-            displayDetailedView();
-            
-            debugLog('✅ Resultados mostrados correctamente');
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('uniqueProducts').textContent = productMap.size;
+            document.getElementById('pendingOrders').textContent = pendingOrders;
+
+            renderTable(Array.from(productMap.values()));
         }
-        
-        function displayProductSummary() {
-            const sortedProducts = Object.entries(productSummary)
-                .sort((a, b) => b[1].cantidad - a[1].cantidad);
-            
-            let html = '<table id="productTableData"><thead><tr><th>Producto</th><th>Cantidad</th><th>Peso Total</th><th>Unidades</th><th>Detalles</th></tr></thead><tbody>';
-            
-            sortedProducts.forEach(([producto, info]) => {
-                const pesoDisplay = info.peso > 0 ? `<span class="weight-badge">${info.peso.toFixed(2)} kg</span>` : '-';
-                const unidadesDisplay = info.unidades > 0 ? `<span class="unit-badge">${info.unidades}</span>` : '-';
-                
-                // NUEVO: Mostrar variedades y sabores con badges diferentes
-                let detallesDisplay = '';
-                if (info.tieneVariedad) {
-                    const variedades = Array.from(info.variedades).map(v => 
-                        `<span class="variety-badge">🌱 ${v}</span>`
-                    ).join(' ');
-                    detallesDisplay += variedades;
-                }
-                if (info.tieneSabor) {
-                    const sabores = Array.from(info.sabores).map(s => 
-                        `<span class="flavor-badge">👅 ${s}</span>`
-                    ).join(' ');
-                    detallesDisplay += (detallesDisplay ? '<br>' : '') + sabores;
-                }
-                
-                html += `<tr>
-                    <td><strong>${producto}</strong></td>
-                    <td><span class="quantity-badge">${info.cantidad}</span></td>
-                    <td>${pesoDisplay}</td>
-                    <td>${unidadesDisplay}</td>
-                    <td><div class="product-detail">${detallesDisplay}</div></td>
-                </tr>`;
-            });
-            
-            html += '</tbody></table>';
-            document.getElementById('productTable').innerHTML = html;
-        }
-        
-        // NUEVA FUNCIÓN: Mostrar productos agrupados por variedad y sabor
-        function displayGroupedProducts() {
-            const sortedGroups = Object.entries(groupedProducts)
-                .sort((a, b) => {
-                    // Ordenar por nombre de producto primero, luego por variedad/sabor
-                    if (a[1].nombre !== b[1].nombre) {
-                        return a[1].nombre.localeCompare(b[1].nombre);
-                    }
-                    return a[0].localeCompare(b[0]);
-                });
-            
-            let html = '<table id="groupedTableData"><thead><tr><th>Producto</th><th>Variedad</th><th>Sabor</th><th>Pedidos Individuales</th><th>Total</th></tr></thead><tbody>';
-            
-            sortedGroups.forEach(([groupKey, info]) => {
-                const variedadDisplay = info.variedad ? `<span class="variety-badge">🌱 ${info.variedad}</span>` : '-';
-                const saborDisplay = info.sabor ? `<span class="flavor-badge">👅 ${info.sabor}</span>` : '-';
-                
-                // Crear lista de pedidos individuales
-                const pedidosAgrupados = {};
-                
-                info.pedidos.forEach(pedido => {
-                    let pedidoKey = '';
-                    
-                    if (pedido.peso) {
-                        // Para productos por peso (gramos/kg)
-                        const pesoGramos = Math.round(pedido.peso * pedido.cantidad * 1000);
-                        pedidoKey = `${pedido.cantidad} x ${pesoGramos}g`;
-                    } else if (pedido.unidades) {
-                        // Para productos por unidades (docenas, medias docenas)
-                        const totalUnidades = pedido.unidades * pedido.cantidad;
-                        if (totalUnidades === 12) {
-                            pedidoKey = `${pedido.cantidad} x 1 docena`;
-                        } else if (totalUnidades === 6) {
-                            pedidoKey = `${pedido.cantidad} x 1/2 docena`;
-                        } else if (totalUnidades === 24) {
-                            pedidoKey = `${pedido.cantidad} x 2 docenas`;
-                        } else {
-                            pedidoKey = `${pedido.cantidad} x ${pedido.unidades}u c/u`;
-                        }
-                    } else {
-                        // Para productos por cantidad simple
-                        pedidoKey = `${pedido.cantidad}x`;
-                    }
-                    
-                    if (!pedidosAgrupados[pedidoKey]) {
-                        pedidosAgrupados[pedidoKey] = 0;
-                    }
-                    pedidosAgrupados[pedidoKey]++;
-                });
-                
-                // Convertir pedidos agrupados a texto
-                const pedidosDisplay = Object.entries(pedidosAgrupados)
-                    .map(([pedido, veces]) => {
-                        if (veces === 1) {
-                            return `<div style="margin: 2px 0; padding: 3px 8px; background: rgba(102, 126, 234, 0.1); border-radius: 10px; display: inline-block; margin-right: 5px;">${pedido}</div>`;
-                        } else {
-                            return `<div style="margin: 2px 0; padding: 3px 8px; background: rgba(102, 126, 234, 0.2); border-radius: 10px; display: inline-block; margin-right: 5px; font-weight: bold;">${veces} × (${pedido})</div>`;
-                        }
-                    })
-                    .join(' ');
-                
-                // Calcular total
-                let totalDisplay = '';
-                if (info.totalPeso > 0) {
-                    const totalGramos = Math.round(info.totalPeso * 1000);
-                    totalDisplay = `<span class="weight-badge">${totalGramos}g total</span>`;
-                } else if (info.totalUnidades > 0) {
-                    const docenas = Math.floor(info.totalUnidades / 12);
-                    const sueltas = info.totalUnidades % 12;
-                    let displayParts = [];
-                    if (docenas > 0) displayParts.push(`${docenas} docena${docenas > 1 ? 's' : ''}`);
-                    if (sueltas > 0) displayParts.push(`${sueltas} sueltas`);
-                    totalDisplay = `<span class="unit-badge">${displayParts.join(' + ')}</span>`;
-                } else {
-                    totalDisplay = `<span class="quantity-badge">${info.totalCantidad} total</span>`;
-                }
-                
-                html += `<tr>
-                    <td><strong>${info.nombre}</strong></td>
-                    <td>${variedadDisplay}</td>
-                    <td>${saborDisplay}</td>
-                    <td>${pedidosDisplay}</td>
-                    <td>${totalDisplay}</td>
-                </tr>`;
-            });
-            
-            html += '</tbody></table>';
-            document.getElementById('groupedTable').innerHTML = html;
-        }
-        
-        function displayClientProducts() {
-            let html = '<table id="clientTableData"><thead><tr><th>Cliente</th>';
-            
-            const allProducts = Object.keys(productSummary).sort();
-            allProducts.forEach(producto => {
-                html += `<th>${producto}</th>`;
-            });
-            html += '<th>Total</th></tr></thead><tbody>';
-            
-            Object.entries(clientProducts).forEach(([cliente, productos]) => {
-                html += `<tr><td><strong>${cliente}</strong></td>`;
-                let totalItems = 0;
-                
-                allProducts.forEach(producto => {
-                    const info = productos[producto];
-                    if (info) {
-                        totalItems += info.cantidad;
-                        let display = `${info.cantidad}`;
-                        if (info.peso > 0) {
-                            display += ` (${info.peso.toFixed(2)}kg)`;
-                        }
-                        if (info.unidades > 0) {
-                            display += ` [${info.unidades}u]`;
-                        }
-                        html += `<td><span class="quantity-badge">${display}</span></td>`;
-                    } else {
-                        html += `<td>-</td>`;
-                    }
-                });
-                
-                html += `<td><strong>${totalItems}</strong></td></tr>`;
-            });
-            
-            html += '</tbody></table>';
-            document.getElementById('clientTable').innerHTML = html;
-        }
-        
-        function displayDetailedView() {
-            // Ordenar salesData por el tipo de envío
-            const sortedSalesData = [...salesData].sort((a, b) => {
-                const envioA = (a.Envío || a['Estado de envío'] || '').toString().trim().toLowerCase();
-                const envioB = (b.Envío || b['Estado de envío'] || '').toString().trim().toLowerCase();
-                return envioA.localeCompare(envioB);
-            });
 
-            let html = '<table id="detailedTableData"><thead><tr><th>Cliente</th><th>Dirección</th><th>Tipo de Envío</th><th>Estado Pago</th><th>Total</th><th>Productos</th></tr></thead><tbody>';
-            
-            sortedSalesData.forEach(row => {
-                const productos = row.Productos || '';
-                const parsedProducts = parseProductInfo(productos);
-                let direccionParts = [];
-                const calle = (row['Envío - Calle'] || '').toString().trim();
-                const numero = (row['Envío - Número'] || '').toString().trim();
-                const piso = (row['Envío - Piso'] || '').toString().trim();
-                const dpto = (row['Envío - Dpto'] || '').toString().trim();
+        function renderTable(products) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
 
-                if (calle) {
-                    let streetAddress = calle;
-                    if (numero) {
-                        streetAddress += ' ' + numero;
-                    }
-                    direccionParts.push(streetAddress);
-                }
-
-                if (piso) {
-                    direccionParts.push('Piso ' + piso);
-                }
-                if (dpto) {
-                    direccionParts.push('Dpto ' + dpto);
-                }
-
-                // If no specific address parts are found, fallback to existing 'Direccion' or '-'
-                const direccionCliente = direccionParts.length > 0 ? direccionParts.join(', ') : (row.Direccion || row.direccion || '-');
-                
-                let productosDisplay = parsedProducts.map(p => {
-                    let display = `${p.cantidad}x ${p.nombre}`;
-                    if (p.peso) display += ` (${p.peso}kg)`;
-                    if (p.unidades) display += ` [${p.unidades}u]`;
-                    if (p.variedad) display += ` - Variedad: ${p.variedad}`;
-                    if (p.sabor) display += ` - Sabor: ${p.sabor}`;  // NUEVO: Mostrar sabor
-                    return display;
-                }).join('<br>');
-
-                // Determinar el tipo de envío (columna "Envío" o "Método de envío")
-                let tipoEnvio = row['Método de envío'] || row.Envío || row['Estado de envío'] || '-';
-                
-                html += `<tr>
-                    <td><strong>${row.Cliente || '-'}</strong></td>
-                    <td>${direccionCliente}</td>
-                    <td>${tipoEnvio}</td>
-                    <td>${row.Pago || '-'}</td>
-                    <td>${row['Total (sin envío)'] || '0'}</td>
-                    <td>${productosDisplay}</td>
-                </tr>`;
-            });
-
-            html += '</tbody></table>';
-            document.getElementById('detailedTable').innerHTML = html;
-        }
-        
-        function showTab(tabName) {
-            console.log(`🔄 Cambiando a pestaña: ${tabName}`);
-            
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.getElementById(tabName).classList.add('active');
-            // Encuentra el botón de la pestaña activa basándose en su 'onclick' o 'id'
-            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
-            
-            // Forzar actualización de la vista detallada cuando se selecciona
-            if (tabName === 'detailed') {
-                console.log('🔄 Forzando actualización de vista detallada');
-                displayDetailedView();
+            // Filtrar si es necesario
+            let filtered = products;
+            if (currentFilter !== 'all') {
+                const statusMap = {
+                    'Finalizado': 'Finalizado',
+                    'Pendiente': 'Pendiente'
+                };
+                // Nota: Necesitaríamos re-agregar lógica de filtro por orden individual
             }
-            // NUEVO: Forzar actualización de productos agrupados
-            if (tabName === 'grouped') {
-                console.log('🔄 Forzando actualización de productos agrupados');
-                displayGroupedProducts();
-            }
-        }
-        
-        function filterTable(tableId, searchId) {
-            const searchTerm = document.getElementById(searchId).value.toLowerCase();
-            const table = document.querySelector(`#${tableId} table`);
-            if (!table) return;
-            
-            const rows = table.querySelectorAll('tbody tr');
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
+
+            // Ordenar por cantidad
+            filtered.sort((a, b) => b.totalQty - a.totalQty);
+
+            filtered.forEach(p => {
+                const row = document.createElement('tr');
+                if (p.error) row.classList.add('error-row');
+                
+                row.innerHTML = `
+                    <td>
+                        <div class="product-name">${escapeHtml(p.name)}</div>
+                        ${p.error ? '<span style="color: orange; font-size: 0.8em;">⚠️ Parseo manual</span>' : ''}
+                    </td>
+                    <td>
+                        ${p.variety ? `<div>Var: ${escapeHtml(p.variety)}</div>` : ''}
+                        ${p.weight ? `<div class="product-meta">Peso: ${escapeHtml(p.weight)}</div>` : ''}
+                    </td>
+                    <td><span class="quantity-badge">${p.totalQty}</span></td>
+                    <td>${p.sku || '-'}</td>
+                    <td>${getStatusBadge(p.orderStatus)}</td>
+                `;
+                tbody.appendChild(row);
             });
-        }
-        
-        function exportTable(tableId, filename) {
-            const table = document.querySelector(`#${tableId} table`);
-            if (!table) return;
-            
-            let csv = '';
-            const rows = table.querySelectorAll('tr');
-            
-            rows.forEach(row => {
-                const cols = row.querySelectorAll('td, th');
-                const csvRow = Array.from(cols).map(col => `"${col.textContent.trim()}"`).join(',');
-                csv += csvRow + '\n';
-            });
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${filename}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
-        
-        function showError(message) {
-            debugLog(`❌ ERROR: ${message}`);
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('error').style.display = 'block';
-            document.getElementById('error').innerHTML = `
-                <h3>❌ Error</h3>
-                <p>${message}</p>
-                <details>
-                    <summary>💡 Consejos</summary>
-                    <ul>
-                        <li>Verifica que el archivo tenga una columna "Productos"</li>
-                        <li>Asegúrate de que el archivo no esté corrupto</li>
-                        <li>Prueba primero con "Datos de Muestra"</li>
-                    </ul>
-                </details>
-            `;
         }
 
-        // --- Funcionalidad de datos de muestra (opcional) ---
-        function loadSampleData() {
-            debugLog('Cargando datos de muestra...');
-            const sampleCsv = `Cliente,Direccion,Productos,Estado de envío,Método de envío,Pago,Total (sin envío),Fecha
-"Cliente A","Calle Falsa 123","3x Granola (Peso: 0.1kg, Sabor: Coco)",Enviado,Correo,Pagado,150.00,2025-07-20
-"Cliente B","Avenida Siempreviva 742","2x Granola (Peso: 0.1kg, Sabor: Coco)",Pendiente,Delivery,Pendiente,240.50,2025-07-21
-"Cliente C","Boulevard de los Sueños 456","1x Granola (Peso: 0.2kg, Sabor: Almendras)",Enviado,Retiro en Tienda,Pagado,150.00,2025-07-21
-"Cliente A","Calle Falsa 123","2x Milanesas (Unidades: 12, Variedad: Pollo)",Enviado,Correo,Pagado,75.00,2025-07-22
-"Cliente D","Pasaje Secreto 888","1x Milanesas (Unidades: 6, Variedad: Pollo)",Pendiente,Delivery,Pendiente,120.25,2025-07-23
-"Cliente B","Avenida Siempreviva 742","1x Hamburguesas (Unidades: 12, Variedad: Carne)",Enviado,Delivery,Pagado,150.00,2025-07-24
-"Cliente E","Ruta 9 KM 100","1x Granola (Peso: 0.15kg, Sabor: Coco)",Pendiente,Correo,Pagado,300.00,2025-07-24
-"Cliente F","Calle Nueva 999","3x Milanesas (Unidades: 12, Variedad: Pollo)",Enviado,Correo,Pagado,180.00,2025-07-25`;
+        function getStatusBadge(status) {
+            const colors = {
+                'Finalizado': '#28a745',
+                'Pendiente': '#ffc107',
+                'Acordar': '#17a2b8'
+            };
+            const color = colors[status] || '#6c757d';
+            return `<span style="background: ${color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">${status}</span>`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function filterStatus(status) {
+            currentFilter = status;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(status.toLowerCase()) || 
+                    (status === 'all' && btn.textContent === 'Todas')) {
+                    btn.classList.add('active');
+                }
+            });
+            // Re-render con filtro
+            const productMap = new Map();
+            salesData.forEach(p => {
+                if (status !== 'all' && !p.orderStatus.includes(status)) return;
+                const key = `${p.name}|${p.variety}|${p.weight}`;
+                if (!productMap.has(key)) {
+                    productMap.set(key, { ...p, totalQty: 0 });
+                }
+                productMap.get(key).totalQty += p.quantity;
+            });
+            renderTable(Array.from(productMap.values()));
+        }
+
+        function downloadCSV() {
+            let csv = 'Producto,Variedad,Peso,Cantidad Total,SKU\n';
+            const productMap = new Map();
             
-            processCsvData(sampleCsv);
+            salesData.forEach(p => {
+                const key = `${p.name}|${p.variety}|${p.weight}`;
+                if (!productMap.has(key)) {
+                    productMap.set(key, { ...p, totalQty: 0 });
+                }
+                productMap.get(key).totalQty += p.quantity;
+            });
+
+            Array.from(productMap.values()).forEach(p => {
+                csv += `"${p.name}","${p.variety || ''}","${p.weight || ''}",${p.totalQty},"${p.sku || ''}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `resumen_ventas_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
         }
     </script>
 </body>
