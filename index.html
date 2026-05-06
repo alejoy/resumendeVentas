@@ -1071,11 +1071,6 @@
                 
                 let productosDisplay = parsedProducts.map(p => {
                     let display = `${p.cantidad}x ${p.nombre}`;
-                    if (p.peso) {
-                        const unitarioGrs = Math.round(p.peso * 1000);
-                        const totalGrs = Math.round(p.pesoTotal * 1000);
-                        display += ` <span class="total-weight-display">${unitarioGrs}g × ${p.cantidad} = ${totalGrs}g</span>`;
-                    }
                     if (p.unidades) display += ` [${p.unidades}u]`;
                     if (p.variedad) display += ` - Var: ${p.variedad}`;
                     if (p.sabor) display += ` - Sab: ${p.sabor}`;
