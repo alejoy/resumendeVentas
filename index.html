@@ -640,58 +640,37 @@
             if (skuMatch) {
                 remaining = remaining.replace(skuMatch[0], '').trim();
             }
-            
-            // Extraer Peso - busca patrones como "Peso: 100grs" o "Peso: 1kg"
-            const pesoMatch = remaining.match(/\(Peso:\s*([^)]+)\)/i);
-            if (pesoMatch) {
-                const pesoStr = pesoMatch[1].trim();
-                result.peso = parseWeight(pesoStr);
-                remaining = remaining.replace(pesoMatch[0], '').trim();
-            }
-            
-            // Extraer Unidades
-            const unidadesMatch = remaining.match(/\(Unidades:\s*(\d+)\)/i);
-            if (unidadesMatch) {
-                result.unidades = parseInt(unidadesMatch[1]);
-                remaining = remaining.replace(unidadesMatch[0], '').trim();
-            }
-            
-            // Extraer Variedad
-            const variedadMatch = remaining.match(/\(Variedad:\s*([^)]+)\)/i);
-            if (variedadMatch) {
-                result.variedad = variedadMatch[1].trim();
-                remaining = remaining.replace(variedadMatch[0], '').trim();
-            }
-            
-            // Extraer Sabor
-            const saborMatch = remaining.match(/\(Sabor:\s*([^)]+)\)/i);
-            if (saborMatch) {
-                result.sabor = saborMatch[1].trim();
-                remaining = remaining.replace(saborMatch[0], '').trim();
-            }
-            
-            // Lo que queda son paréntesis sin etiqueta (como "sin azucar") o el nombre base
-            // Buscar paréntesis restantes que no sean metadata etiquetada
-            const extraMatches = remaining.match(/\(([^)]+)\)/g);
-            if (extraMatches) {
-                // Si hay paréntesis restantes, podrían ser descriptores como "(sin azucar)"
-                const extras = extraMatches.map(m => m.slice(1, -1).trim());
-                result.detallesRestantes = extras.join(', ');
-                
-                // Limpiar paréntesis del nombre base
-                result.nombre = remaining.replace(/\([^)]+\)/g, '').trim();
-                
-                // Si no quedó nombre pero sí extras, usar el primero como nombre
-                if (!result.nombre && extras.length > 0) {
-                    result.nombre = extras[0];
-                    result.detallesRestantes = extras.slice(1).join(', ');
-                }
-            } else {
-                result.nombre = remaining.trim();
-            }
-            
-            // Limpiar espacios múltiples
-            result.nombre = result.nombre.replace(/\s+/g, ' ').trim();
+
+            // Extraer todos los bloques entre paréntesis y parsear sus atributos
+            // Soporta tanto (Peso: 100grs) como (Peso: 1kg,Sabor: Coco) en un solo bloque
+            const parenBlocks = [];
+            remaining = remaining.replace(/\(([^)]+)\)/g, (match, inner) => {
+                parenBlocks.push(inner);
+                return '';
+            });
+            remaining = remaining.trim();
+
+            parenBlocks.forEach(block => {
+                // Separar por comas dentro del bloque
+                const parts = block.split(',').map(p => p.trim());
+                parts.forEach(part => {
+                    const kv = part.match(/^(Peso|Unidades|Variedad|Sabor):\s*(.+)$/i);
+                    if (kv) {
+                        const key = kv[1].toLowerCase();
+                        const val = kv[2].trim();
+                        if (key === 'peso') result.peso = parseWeight(val);
+                        else if (key === 'unidades') result.unidades = parseInt(val);
+                        else if (key === 'variedad') result.variedad = val;
+                        else if (key === 'sabor') result.sabor = val;
+                    } else {
+                        // paréntesis sin etiqueta, ej: (sin azucar)
+                        if (result.detallesRestantes) result.detallesRestantes += ', ' + part;
+                        else result.detallesRestantes = part;
+                    }
+                });
+            });
+
+            result.nombre = remaining.replace(/\s+/g, ' ').trim();
             
             return result;
         }
@@ -1181,7 +1160,10 @@
                 parsedProducts.forEach((p, i) => {
                     const isLast = i === parsedProducts.length - 1;
                     let itemText = `${p.cantidad}x ${p.nombre}`;
-                    if (p.pesoTotal) itemText += ` ${Math.round(p.pesoTotal * 1000)}grs`;
+                    if (p.pesoTotal && p.pesoTotal > 0) {
+                        const totalGrs = Math.round(p.pesoTotal * 1000);
+                        itemText += totalGrs >= 1000 ? ` ${(p.pesoTotal).toFixed(totalGrs % 1000 === 0 ? 0 : 2)}kg` : ` ${totalGrs}grs`;
+                    }
                     if (p.unidades) itemText += ` x ${p.unidades}u`;
                     if (p.variedad) itemText += ` - Variedad: ${p.variedad}`;
                     if (p.sabor) itemText += ` - Sabor: ${p.sabor}`;
