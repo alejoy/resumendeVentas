@@ -1181,6 +1181,7 @@
                 parsedProducts.forEach((p, i) => {
                     const isLast = i === parsedProducts.length - 1;
                     let itemText = `${p.cantidad}x ${p.nombre}`;
+                    if (p.pesoTotal) itemText += ` ${Math.round(p.pesoTotal * 1000)}grs`;
                     if (p.unidades) itemText += ` x ${p.unidades}u`;
                     if (p.variedad) itemText += ` - Variedad: ${p.variedad}`;
                     if (p.sabor) itemText += ` - Sabor: ${p.sabor}`;
