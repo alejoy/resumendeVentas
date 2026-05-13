@@ -1052,6 +1052,10 @@
                 
                 let productosDisplay = parsedProducts.map(p => {
                     let display = `${p.cantidad}x ${p.nombre}`;
+                    if (p.pesoTotal && p.pesoTotal > 0) {
+                        const totalGrs = Math.round(p.pesoTotal * 1000);
+                        display += totalGrs >= 1000 ? ` ${(p.pesoTotal % 1 === 0 ? p.pesoTotal.toFixed(0) : p.pesoTotal.toFixed(2))}kg` : ` ${totalGrs}grs`;
+                    }
                     if (p.unidades) display += ` [${p.unidades}u]`;
                     if (p.variedad) display += ` - Var: ${p.variedad}`;
                     if (p.sabor) display += ` - Sab: ${p.sabor}`;
